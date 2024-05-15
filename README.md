@@ -1,2 +1,3 @@
 # soapdav
-Custom DAV service for private NAS
+
+Custom WebDAV service for private NAS service, in order to manage mess of manga
