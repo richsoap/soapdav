@@ -7,7 +7,7 @@ use std::vec::Vec;
 pub enum ManagerError {
     NotEmpty(String),
     Conflict,
-    NotFound,
+    NotFound(String),
 }
 
 impl error::Error for ManagerError {
@@ -19,7 +19,7 @@ impl error::Error for ManagerError {
 impl fmt::Display for ManagerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotEmpty(key) => write!(f, "{:?}: {}", self, key),
+            Self::NotEmpty(key)| Self::NotFound(key) => write!(f, "{:?}: {}", self, key),
             _ => write!(f, "{:?}:", self),
         }
     }
@@ -31,12 +31,12 @@ pub trait Manager {
     fn define_label_value(
         &mut self,
         label_type: &String,
-        label_values: &[String],
+        label_values: &Vec<String>,
     ) -> Result<(), ManagerError>;
     fn remove_label_value(
         &mut self,
         label_type: &String,
-        label_values: &[String],
+        label_values: &Vec<String>,
     ) -> Result<(), ManagerError>;
     fn list_label(&self) -> Result<Vec<String>, ManagerError>;
     fn list_label_value(&self, label: &String) -> Result<Vec<String>, ManagerError>;
