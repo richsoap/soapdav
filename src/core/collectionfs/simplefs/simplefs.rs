@@ -25,6 +25,12 @@ pub struct SimpleFileSystem {
 }
 
 impl SimpleFileSystem {
+    pub fn new(selector_set_storage: &Arc<dyn SelectorSetStorage>) -> Self {
+        SimpleFileSystem{
+            selector_set_storage: selector_set_storage.clone(),
+        }
+    }
+
     fn split_path(path: &DavPath) -> Result<Vec<String>, std::str::Utf8Error> {
         match percent_decode(path.as_bytes()).decode_utf8() {
             Ok(cs) => Ok(cs.into_owned().split('/').map(|s| s.to_string()).collect()),

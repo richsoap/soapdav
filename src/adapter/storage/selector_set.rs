@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, time};
 
 use super::Selectors;
 use mockall::automock;
@@ -26,6 +26,17 @@ pub struct SelectorSet {
     pub selectors: Selectors,
     pub required_selectors: Selectors,
     pub modified_time: std::time::SystemTime,
+}
+
+impl SelectorSet {
+    pub fn new(name: &String) -> Self {
+        SelectorSet{
+            name: name.to_string(),
+            selectors: vec![],
+            required_selectors: vec![],
+            modified_time: time::SystemTime::now(),
+        }
+    }
 }
 
 // 请求的参数定义
