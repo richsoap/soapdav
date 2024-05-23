@@ -1,12 +1,18 @@
 use futures::FutureExt;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
-
+use crate::adapter::storage::SelectorSet;
 
 #[derive(Debug, Clone)]
-struct StaticDir {
+pub struct StaticDir {
     name: String,
     modified_time: std::time::SystemTime,
+}
+
+impl From<&SelectorSet> for StaticDir {
+    fn from(value: &SelectorSet) -> Self {
+        return StaticDir { name: value.name.clone(), modified_time: value.modified_time }
+    }
 }
 
 impl DavDirEntry for StaticDir {

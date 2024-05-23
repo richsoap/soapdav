@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use super::Selectors;
+use mockall::automock;
 use thiserror::Error;
 
 // 定义 SelectorSetStorage 错误, 用于处理可能出现的错误情况
@@ -9,12 +10,13 @@ pub enum SelectorSetStorageError {
 }
 
 // SelectorSetStorage trait
+#[automock]
 pub trait SelectorSetStorage: Send + Sync + Debug {
     fn define_selector_set(&self, params: DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;
     
     fn remove_selector_set(&self, params: RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
     
-    fn list_selector_set(&self, params: ListSelectorSetParams) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
+    fn list_selector_set<'a>(&self, params: ListSelectorSetParams<'a>) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
 }
 
 // SelectorSet 的定义
@@ -23,6 +25,7 @@ pub struct SelectorSet {
     pub name: String,
     pub selectors: Selectors,
     pub required_selectors: Selectors,
+    pub modified_time: std::time::SystemTime,
 }
 
 // 请求的参数定义
@@ -37,8 +40,8 @@ pub struct RemoveSelectorSetParams {
 }
 
 #[derive(Debug, Clone)]
-pub struct ListSelectorSetParams {
-    pub name: Vec<String>,
+pub struct ListSelectorSetParams<'a> {
+    pub name:&'a Vec<String>,
 }
 
 // 响应的结果定义

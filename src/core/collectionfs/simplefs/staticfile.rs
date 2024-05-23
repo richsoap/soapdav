@@ -2,7 +2,7 @@ use std::cmp::{max, min};
 
 use bytes::Bytes;
 use futures::FutureExt;
-use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
+use webdav_handler::fs::{DavFile, DavMetaData};
 
 
 
