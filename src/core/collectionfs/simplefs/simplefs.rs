@@ -5,7 +5,6 @@ use std::time::SystemTime;
 use futures::stream::iter;
 use futures::FutureExt;
 use log::info;
-use mockall::predicate::path;
 use percent_encoding::percent_decode;
 use webdav_handler::davpath::DavPath;
 use webdav_handler::fs::{
@@ -62,8 +61,9 @@ impl SimpleFileSystem {
         // 将路径中的参数逐个填到selector中
         while !tokens.is_empty() && !selector_set.is_full() {
             let selector_value = tokens.pop_front().unwrap();
-            // TODO: 带点的都是特殊说明文件，做特殊处理
+            // TODO: 带点的都是特殊说明文件，不是目录
             if selector_value.starts_with('.') {
+                return Err(FsError::NotFound)
             } else {
                 selector_set.add_required_value(selector_value);
             }
@@ -72,14 +72,7 @@ impl SimpleFileSystem {
         if !selector_set.is_full() {
             return self.read_selecting_dir_stream(selector_set, meta)
         }
-        // 筛选器已填满，说明可以执行筛选操作
-        let selectors = match self
-            .selector_storage
-            .list_selector_for_selector_set(selector_set)
-        {
-            Ok(v) => v.selectors,
-            Err(e) => return Err(FsError::NotFound),
-        };
+        // TODO: 筛选器已填满，说明可以执行筛选操作
         Err(FsError::NotFound)
     }
 
