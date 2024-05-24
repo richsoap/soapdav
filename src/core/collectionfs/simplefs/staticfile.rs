@@ -2,16 +2,31 @@ use std::cmp::{max, min};
 
 use bytes::Bytes;
 use futures::FutureExt;
-use webdav_handler::fs::{DavFile, DavMetaData};
-
-
+use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
 #[derive(Debug, Clone)]
-struct StaticFile {
+pub struct StaticFile {
     name: String,
     modified_time: std::time::SystemTime,
     body: Bytes,
     offset: usize,
+}
+
+impl StaticFile {
+    pub fn new(name: String, body: Option<Bytes>, modified_time: Option<std::time::SystemTime>) -> Self {
+        StaticFile {
+            name: name,
+            modified_time: match modified_time {
+                Some(v) => v,
+                None => std::time::SystemTime::now(),
+            },
+            body: match body {
+                Some(v) => v,
+                None => Bytes::new(),
+            },
+            offset: 0,
+        }
+    }
 }
 
 impl DavMetaData for StaticFile {
@@ -28,19 +43,32 @@ impl DavMetaData for StaticFile {
     }
 }
 
-impl DavFile for StaticFile {
-    fn metadata<'a>(&'a mut self) -> webdav_handler::fs::FsFuture<Box<dyn DavMetaData>> {
+impl DavDirEntry for StaticFile {
+    fn name(&self) -> Vec<u8> {
+        self.name.to_string().into_bytes()
+    }
+
+    fn metadata<'a>(&'a self) -> webdav_handler::fs::FsFuture<Box<dyn DavMetaData>> {
         async {
             Ok(Box::new(self.clone()) as Box<dyn DavMetaData>)
         }.boxed()
     }
+}
 
-    fn write_buf<'a>(&'a mut self, buf: Box<dyn bytes::Buf + Send>) -> webdav_handler::fs::FsFuture<()> {
-        async {Ok(())}.boxed()
+impl DavFile for StaticFile {
+    fn metadata<'a>(&'a mut self) -> webdav_handler::fs::FsFuture<Box<dyn DavMetaData>> {
+        async { Ok(Box::new(self.clone()) as Box<dyn DavMetaData>) }.boxed()
+    }
+
+    fn write_buf<'a>(
+        &'a mut self,
+        buf: Box<dyn bytes::Buf + Send>,
+    ) -> webdav_handler::fs::FsFuture<()> {
+        async { Ok(()) }.boxed()
     }
 
     fn write_bytes<'a>(&'a mut self, buf: bytes::Bytes) -> webdav_handler::fs::FsFuture<()> {
-        async {Ok(())}.boxed()
+        async { Ok(()) }.boxed()
     }
 
     fn read_bytes<'a>(&'a mut self, count: usize) -> webdav_handler::fs::FsFuture<bytes::Bytes> {
@@ -49,7 +77,8 @@ impl DavFile for StaticFile {
             let result = self.body.slice(self.offset..end);
             self.offset = end;
             Ok(result)
-        }.boxed()
+        }
+        .boxed()
     }
 
     fn seek<'a>(&'a mut self, pos: std::io::SeekFrom) -> webdav_handler::fs::FsFuture<u64> {
@@ -60,10 +89,11 @@ impl DavFile for StaticFile {
                 std::io::SeekFrom::Current(v) => min(self.offset + v as usize, self.body.len()),
             };
             Ok(self.offset as u64)
-        }.boxed()
+        }
+        .boxed()
     }
 
     fn flush<'a>(&'a mut self) -> webdav_handler::fs::FsFuture<()> {
-        async {Ok(())}.boxed()
+        async { Ok(()) }.boxed()
     }
 }

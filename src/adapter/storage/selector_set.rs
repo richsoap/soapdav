@@ -1,6 +1,6 @@
 use std::{fmt::Debug, time};
 
-use super::Selectors;
+use super::{Selector, Selectors};
 use mockall::automock;
 use thiserror::Error;
 
@@ -54,6 +54,34 @@ impl SelectorSet {
             modified_time: time::SystemTime::now(),
         }
     }
+
+    pub fn is_full(&self) -> bool {
+        self.get_next_required_index().is_none()
+    }
+
+    pub fn add_required_value(&mut self, value: String) {
+        match self.get_next_required_index() {
+            Some(index) => self.required_selectors.get_mut(index).unwrap().add_value(value),
+            None => return,
+        }
+    }
+
+    fn get_next_required_index(&self) -> Option<usize> {
+        for (i, s) in self.required_selectors.iter().enumerate() {
+            if s.is_missing_value() {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    pub fn get_next_required_selector(&self) -> Option<&Selector> {
+        match self.get_next_required_index() {
+            Some(v) => self.selectors.get(v),
+            None => None,
+        }
+    }
+
 }
 
 // 请求的参数定义

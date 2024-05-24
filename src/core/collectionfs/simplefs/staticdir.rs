@@ -1,6 +1,7 @@
 use futures::FutureExt;
 use log::info;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
+use xml::name;
 
 use crate::adapter::storage::SelectorSet;
 
@@ -19,6 +20,12 @@ impl StaticDir {
 impl From<&SelectorSet> for StaticDir {
     fn from(value: &SelectorSet) -> Self {
         return StaticDir { name: value.name.clone(), modified_time: value.modified_time }
+    }
+}
+
+impl From<&String> for StaticDir {
+    fn from(name: &String) -> Self {
+        return StaticDir { name: name.clone(), modified_time: std::time::SystemTime::now() }
     }
 }
 

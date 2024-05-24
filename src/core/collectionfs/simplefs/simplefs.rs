@@ -12,24 +12,22 @@ use webdav_handler::fs::{
     DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsResult, FsStream, ReadDirMeta,
 };
 
-use crate::adapter::storage::{ListSelectorSetParams, SelectorSetStorage};
+use crate::adapter::storage::{
+    ListSelectorSetParams, SelectorSet, SelectorSetStorage, SelectorStorage,
+};
 use crate::core::collectionfs::CollectionFS;
 
 use super::staticdir::StaticDir;
+use super::staticfile::StaticFile;
 
 #[derive(Debug, Clone)]
 pub struct SimpleFileSystem {
-    selector_set_storage: Arc<dyn SelectorSetStorage>,
+    pub selector_set_storage: Arc<dyn SelectorSetStorage>,
+    pub selector_storage: Arc<dyn SelectorStorage>,
     // 这里需要根据实际情况定义 CollectionFileSystem 的字段
 }
 
 impl SimpleFileSystem {
-    pub fn new(selector_set_storage: &Arc<dyn SelectorSetStorage>) -> Self {
-        SimpleFileSystem {
-            selector_set_storage: selector_set_storage.clone(),
-        }
-    }
-
     fn split_path(path: &DavPath) -> Result<Vec<String>, std::str::Utf8Error> {
         match percent_decode(path.as_bytes()).decode_utf8() {
             Ok(cs) => Ok(cs
@@ -41,6 +39,7 @@ impl SimpleFileSystem {
             Err(e) => Err(e),
         }
     }
+
     fn read_dir_stream<'a>(
         &'a self,
         paths: &Vec<String>,
@@ -48,14 +47,39 @@ impl SimpleFileSystem {
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
         info!("path={:?}", paths);
         let mut tokens = VecDeque::from(paths.clone());
+        // 根目录
         if tokens.is_empty() {
             return self.read_root_dir_stream(meta);
         }
-        let selector_set =
-            match self.selector_set_storage.get_selector_set_by_name(&tokens.pop_front().unwrap()) {
-                Ok(v) => v,
-                Err(e) => return Err(FsError::NotFound),
-            };
+        // 构造筛选器组
+        let mut selector_set = match self
+            .selector_set_storage
+            .get_selector_set_by_name(&tokens.pop_front().unwrap())
+        {
+            Ok(v) => v,
+            Err(_e) => return Err(FsError::NotFound),
+        };
+        // 将路径中的参数逐个填到selector中
+        while !tokens.is_empty() && !selector_set.is_full() {
+            let selector_value = tokens.pop_front().unwrap();
+            // TODO: 带点的都是特殊说明文件，做特殊处理
+            if selector_value.starts_with('.') {
+            } else {
+                selector_set.add_required_value(selector_value);
+            }
+        }
+        // 筛选器还没有满，找到下一个筛选项，并将可选结果以目录的形式返回
+        if !selector_set.is_full() {
+            return self.read_selecting_dir_stream(selector_set, meta)
+        }
+        // 筛选器已填满，说明可以执行筛选操作
+        let selectors = match self
+            .selector_storage
+            .list_selector_for_selector_set(selector_set)
+        {
+            Ok(v) => v.selectors,
+            Err(e) => return Err(FsError::NotFound),
+        };
         Err(FsError::NotFound)
     }
 
@@ -78,6 +102,29 @@ impl SimpleFileSystem {
                 Ok(Box::pin(iter(dirs)))
             }
         }
+    }
+
+    fn read_selecting_dir_stream<'a>(
+        &'a self,
+        selector_set: SelectorSet,
+        meta: ReadDirMeta,
+    ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
+        let next_selector = selector_set.get_next_required_selector().unwrap();
+        let next_selector = match self
+            .selector_storage
+            .get_selector_by_key(next_selector.get_key())
+        {
+            Ok(v) => v,
+            Err(_) => return Err(FsError::NotFound),
+        };
+        let mut dirs: Vec<Box<dyn DavDirEntry>> = next_selector
+            .value
+            .iter()
+            .map(StaticDir::from)
+            .map(|x| Box::new(x) as Box<dyn DavDirEntry>)
+            .collect();
+        dirs.push(Box::new(StaticFile::new(next_selector.key, None, None)) as Box<dyn DavDirEntry>);
+        Ok(Box::pin(iter(dirs)))
     }
 }
 
