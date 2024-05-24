@@ -52,16 +52,9 @@ impl SimpleFileSystem {
             return self.read_root_dir_stream(meta);
         }
         let selector_set =
-            match self
-                .selector_set_storage
-                .list_selector_set(ListSelectorSetParams {
-                    name: &vec![tokens.pop_front().unwrap()],
-                }) {
-                Ok(res) => match res.selector_set.get(0) {
-                    Some(r) => r.clone(),
-                    None => return Err(FsError::NotFound),
-                },
-                Err(_) => return Err(FsError::GeneralFailure),
+            match self.selector_set_storage.get_selector_set_by_name(&tokens.pop_front().unwrap()) {
+                Ok(v) => v,
+                Err(e) => return Err(FsError::NotFound),
             };
         Err(FsError::NotFound)
     }

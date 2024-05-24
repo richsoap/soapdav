@@ -7,6 +7,8 @@ use thiserror::Error;
 // 定义 SelectorSetStorage 错误, 用于处理可能出现的错误情况
 #[derive(Error, Debug)]
 pub enum SelectorSetStorageError {
+    #[error("NotFound")]
+    NotFound,
 }
 
 // SelectorSetStorage trait
@@ -18,6 +20,20 @@ pub trait SelectorSetStorage: Send + Sync + Debug {
     fn remove_selector_set(&self, params: RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
     
     fn list_selector_set<'a>(&self, params: ListSelectorSetParams<'a>) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
+
+    fn get_selector_set_by_name<'a>(&self,name: &String) -> Result<SelectorSet, SelectorSetStorageError> {
+        let params = ListSelectorSetParams{
+            name: &vec![name.to_string()],
+        };
+        let result = self.list_selector_set(params);
+        match result {
+            Ok(res) => match res.selector_set.get(0) {
+                Some(v) => Ok(v.clone()),
+                None => Err(SelectorSetStorageError::NotFound),
+            },
+            Err(e) => Err(e),
+        }
+    }
 }
 
 // SelectorSet 的定义
