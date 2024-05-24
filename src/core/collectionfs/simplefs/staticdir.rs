@@ -9,6 +9,12 @@ pub struct StaticDir {
     modified_time: std::time::SystemTime,
 }
 
+impl StaticDir {
+    pub fn new(name: &String, modified_time: std::time::SystemTime) -> Self {
+        StaticDir { name: name.to_string(), modified_time: modified_time }
+    }
+}
+
 impl From<&SelectorSet> for StaticDir {
     fn from(value: &SelectorSet) -> Self {
         return StaticDir { name: value.name.clone(), modified_time: value.modified_time }

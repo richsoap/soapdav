@@ -1,16 +1,14 @@
-use std::env::split_paths;
-use std::fs::{File, Metadata, OpenOptions};
-use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Seek, Write};
-use std::path::Path;
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use futures::stream::iter;
 use futures::FutureExt;
+use log::info;
 use percent_encoding::percent_decode;
 use webdav_handler::davpath::DavPath;
 use webdav_handler::fs::{
-    BoxCloneFs, DavDirEntry, DavFile, DavFileSystem, FsError, FsResult, FsStream, ReadDirMeta,
+    DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsResult, FsStream,
+    ReadDirMeta,
 };
 
 use crate::adapter::storage::{ListSelectorSetParams, SelectorSetStorage};
@@ -26,7 +24,7 @@ pub struct SimpleFileSystem {
 
 impl SimpleFileSystem {
     pub fn new(selector_set_storage: &Arc<dyn SelectorSetStorage>) -> Self {
-        SimpleFileSystem{
+        SimpleFileSystem {
             selector_set_storage: selector_set_storage.clone(),
         }
     }
@@ -52,7 +50,6 @@ impl SimpleFileSystem {
         let selector_sets = self
             .selector_set_storage
             .list_selector_set(ListSelectorSetParams { name: &vec![] });
-        if selector_sets.is_err() {}
         match selector_sets {
             Err(_) => Err(FsError::GeneralFailure),
             Ok(result) => {
@@ -74,6 +71,7 @@ impl DavFileSystem for SimpleFileSystem {
         path: &'a webdav_handler::davpath::DavPath,
         options: webdav_handler::fs::OpenOptions,
     ) -> webdav_handler::fs::FsFuture<Box<dyn DavFile>> {
+        info!("openFile {}", path);
         todo!()
     }
 
@@ -82,6 +80,7 @@ impl DavFileSystem for SimpleFileSystem {
         path: &'a webdav_handler::davpath::DavPath,
         meta: webdav_handler::fs::ReadDirMeta,
     ) -> webdav_handler::fs::FsFuture<webdav_handler::fs::FsStream<Box<dyn DavDirEntry>>> {
+        info!("readDir {}", path);
         async move {
             match SimpleFileSystem::split_path(path) {
                 Ok(paths) => self.read_dir_stream(&paths, meta),
@@ -95,7 +94,12 @@ impl DavFileSystem for SimpleFileSystem {
         &'a self,
         path: &'a webdav_handler::davpath::DavPath,
     ) -> webdav_handler::fs::FsFuture<Box<dyn webdav_handler::fs::DavMetaData>> {
-        todo!()
+        info!("readMeta{}", path);
+        async {
+            let meta = StaticDir::new(&String::from("root"), SystemTime::now());
+            Ok(Box::new(meta) as Box<dyn DavMetaData>)
+        }
+        .boxed()
     }
 }
 
