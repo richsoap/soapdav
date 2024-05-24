@@ -10,6 +10,7 @@ pub enum SelectorSetStorageError {
 }
 
 // SelectorSetStorage trait
+// TODO:(yangqinglong) add modifier selector_set api
 #[automock]
 pub trait SelectorSetStorage: Send + Sync + Debug {
     fn define_selector_set(&self, params: DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;

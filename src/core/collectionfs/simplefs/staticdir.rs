@@ -1,4 +1,5 @@
 use futures::FutureExt;
+use log::info;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
 use crate::adapter::storage::SelectorSet;
@@ -35,7 +36,7 @@ impl DavDirEntry for StaticDir {
 
 impl DavMetaData for StaticDir {
     fn len(&self) -> u64 {
-        0
+        12
     }
 
     fn modified(&self) -> webdav_handler::fs::FsResult<std::time::SystemTime> {
@@ -45,6 +46,7 @@ impl DavMetaData for StaticDir {
     fn is_dir(&self) -> bool {
         true
     }
+    
 }
 
 impl DavFile for StaticDir {

@@ -1,16 +1,18 @@
 use std::convert::Infallible;
 use std::error::Error;
+use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::SystemTime;
 
+use hyper;
 use soapdav::adapter::storage::{
     ListSelectorSetResult, MockSelectorSetStorage, SelectorSet, SelectorSetStorage,
 };
 use soapdav::SimpleFileSystem;
-use hyper;
 
-use log::info;
+use log::{info, warn};
 use webdav_handler::body::Body;
 use webdav_handler::{fakels, DavHandler};
 
@@ -21,7 +23,6 @@ struct Server {
 
 impl Server {
     pub fn new() -> Self {
-        let mut config = DavHandler::builder();
         let mut selector_set_storage = MockSelectorSetStorage::new();
         {
             selector_set_storage
@@ -35,8 +36,10 @@ impl Server {
         let simplefs =
             SimpleFileSystem::new(&(Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>));
 
-        config = config.filesystem(Box::new(simplefs));
-        config = config.locksystem(fakels::FakeLs::new());
+        let config = DavHandler::builder()
+            .filesystem(Box::new(simplefs))
+            .locksystem(fakels::FakeLs::new())
+            .autoindex(true, None);
         Server {
             dh: config.build_handler(),
         }
@@ -50,13 +53,23 @@ impl Server {
     }
 }
 
-
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
-    info!("before new server");
+    env_logger::Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{}:{} [{}] - {}",
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                record.level(),
+                record.args()
+            )
+        })
+        .filter(None, log::LevelFilter::Debug)
+        .init();
 
     let dav_server = Server::new();
-    info!("after new Server");
     let make_service = hyper::service::make_service_fn(|_| {
         let dav_server = dav_server.clone();
         async move {
@@ -70,10 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let addr = format!("0.0.0.0:{}", 9876);
     let addr = SocketAddr::from_str(&addr)?;
-    info!("before server started");
-
-    let server = hyper::Server::try_bind(&addr)?
-        .serve(make_service);
+    let server = hyper::Server::try_bind(&addr)?.serve(make_service);
     info!("server started at {}", addr);
     let _ = server.await;
     Ok(())

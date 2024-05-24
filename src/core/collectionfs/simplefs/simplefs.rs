@@ -1,14 +1,15 @@
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use futures::stream::iter;
 use futures::FutureExt;
 use log::info;
+use mockall::predicate::path;
 use percent_encoding::percent_decode;
 use webdav_handler::davpath::DavPath;
 use webdav_handler::fs::{
-    DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsResult, FsStream,
-    ReadDirMeta,
+    DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsResult, FsStream, ReadDirMeta,
 };
 
 use crate::adapter::storage::{ListSelectorSetParams, SelectorSetStorage};
@@ -31,7 +32,12 @@ impl SimpleFileSystem {
 
     fn split_path(path: &DavPath) -> Result<Vec<String>, std::str::Utf8Error> {
         match percent_decode(path.as_bytes()).decode_utf8() {
-            Ok(cs) => Ok(cs.into_owned().split('/').map(|s| s.to_string()).collect()),
+            Ok(cs) => Ok(cs
+                .into_owned()
+                .split('/')
+                .map(|s| s.to_string())
+                .filter(|x| !x.is_empty())
+                .collect()),
             Err(e) => Err(e),
         }
     }
@@ -40,7 +46,24 @@ impl SimpleFileSystem {
         paths: &Vec<String>,
         meta: webdav_handler::fs::ReadDirMeta,
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
-        self.read_root_dir_stream(meta)
+        info!("path={:?}", paths);
+        let mut tokens = VecDeque::from(paths.clone());
+        if tokens.is_empty() {
+            return self.read_root_dir_stream(meta);
+        }
+        let selector_set =
+            match self
+                .selector_set_storage
+                .list_selector_set(ListSelectorSetParams {
+                    name: &vec![tokens.pop_front().unwrap()],
+                }) {
+                Ok(res) => match res.selector_set.get(0) {
+                    Some(r) => r.clone(),
+                    None => return Err(FsError::NotFound),
+                },
+                Err(_) => return Err(FsError::GeneralFailure),
+            };
+        Err(FsError::NotFound)
     }
 
     fn read_root_dir_stream<'a>(
@@ -71,7 +94,6 @@ impl DavFileSystem for SimpleFileSystem {
         path: &'a webdav_handler::davpath::DavPath,
         options: webdav_handler::fs::OpenOptions,
     ) -> webdav_handler::fs::FsFuture<Box<dyn DavFile>> {
-        info!("openFile {}", path);
         todo!()
     }
 
@@ -80,7 +102,6 @@ impl DavFileSystem for SimpleFileSystem {
         path: &'a webdav_handler::davpath::DavPath,
         meta: webdav_handler::fs::ReadDirMeta,
     ) -> webdav_handler::fs::FsFuture<webdav_handler::fs::FsStream<Box<dyn DavDirEntry>>> {
-        info!("readDir {}", path);
         async move {
             match SimpleFileSystem::split_path(path) {
                 Ok(paths) => self.read_dir_stream(&paths, meta),
@@ -94,7 +115,6 @@ impl DavFileSystem for SimpleFileSystem {
         &'a self,
         path: &'a webdav_handler::davpath::DavPath,
     ) -> webdav_handler::fs::FsFuture<Box<dyn webdav_handler::fs::DavMetaData>> {
-        info!("readMeta{}", path);
         async {
             let meta = StaticDir::new(&String::from("root"), SystemTime::now());
             Ok(Box::new(meta) as Box<dyn DavMetaData>)
