@@ -33,9 +33,10 @@ impl Server {
                     })
                 });
         }
-        let simplefs =
-            SimpleFileSystem::new(&(Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>));
-
+        let simplefs = SimpleFileSystem {
+            selector_set_storage: (Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>) ,
+            selector_storage: todo!(),
+        };
         let config = DavHandler::builder()
             .filesystem(Box::new(simplefs))
             .locksystem(fakels::FakeLs::new())

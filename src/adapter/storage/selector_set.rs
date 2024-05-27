@@ -40,8 +40,8 @@ pub trait SelectorSetStorage: Send + Sync + Debug {
 #[derive(Debug, Clone)]
 pub struct SelectorSet {
     pub name: String,
-    pub selectors: Selectors,
-    pub required_selectors: Selectors,
+    pub static_selectors: Selectors,
+    pub dynamic_selectors: Selectors,
     pub modified_time: std::time::SystemTime,
 }
 
@@ -49,8 +49,8 @@ impl SelectorSet {
     pub fn new(name: &String) -> Self {
         SelectorSet{
             name: name.to_string(),
-            selectors: vec![],
-            required_selectors: vec![],
+            static_selectors: vec![],
+            dynamic_selectors: vec![],
             modified_time: time::SystemTime::now(),
         }
     }
@@ -61,13 +61,13 @@ impl SelectorSet {
 
     pub fn add_required_value(&mut self, value: String) {
         match self.get_next_required_index() {
-            Some(index) => self.required_selectors.get_mut(index).unwrap().add_value(value),
+            Some(index) => self.dynamic_selectors.get_mut(index).unwrap().add_value(value),
             None => return,
         }
     }
 
     fn get_next_required_index(&self) -> Option<usize> {
-        for (i, s) in self.required_selectors.iter().enumerate() {
+        for (i, s) in self.dynamic_selectors.iter().enumerate() {
             if s.is_missing_value() {
                 return Some(i);
             }
@@ -77,7 +77,7 @@ impl SelectorSet {
 
     pub fn get_next_required_selector(&self) -> Option<&Selector> {
         match self.get_next_required_index() {
-            Some(v) => self.selectors.get(v),
+            Some(v) => self.static_selectors.get(v),
             None => None,
         }
     }
