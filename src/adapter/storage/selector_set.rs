@@ -15,17 +15,17 @@ pub enum SelectorSetStorageError {
 // TODO:(yangqinglong) add modifier selector_set api
 #[automock]
 pub trait SelectorSetStorage: Send + Sync + Debug {
-    fn define_selector_set(&self, params: DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;
+    fn define_selector_set(&mut self, params: &DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;
     
-    fn remove_selector_set(&self, params: RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
+    fn remove_selector_set(&mut self, params: &RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
     
-    fn list_selector_set<'a>(&self, params: ListSelectorSetParams<'a>) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
+    fn list_selector_set<'a>(&self, params: &ListSelectorSetParams) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
 
     fn get_selector_set_by_name<'a>(&self,name: &String) -> Result<SelectorSet, SelectorSetStorageError> {
         let params = ListSelectorSetParams{
-            name: &vec![name.to_string()],
+            names: vec![name.to_string()],
         };
-        let result = self.list_selector_set(params);
+        let result = self.list_selector_set(&params);
         match result {
             Ok(res) => match res.selector_set.get(0) {
                 Some(v) => Ok(v.clone()),
@@ -92,12 +92,12 @@ pub struct DefineSelectorSetParams {
 
 #[derive(Debug, Clone)]
 pub struct RemoveSelectorSetParams {
-    pub name: String,
+    pub names: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
-pub struct ListSelectorSetParams<'a> {
-    pub name:&'a Vec<String>,
+pub struct ListSelectorSetParams {
+    pub names: Vec<String>,
 }
 
 // 响应的结果定义
@@ -108,7 +108,7 @@ pub struct DefineSelectorSetResult {
 
 #[derive(Debug, Clone)]
 pub struct RemoveSelectorSetResult {
-    pub name: String,
+    pub names: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

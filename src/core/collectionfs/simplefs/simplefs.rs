@@ -82,7 +82,7 @@ impl SimpleFileSystem {
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
         let selector_sets = self
             .selector_set_storage
-            .list_selector_set(ListSelectorSetParams { name: &vec![] });
+            .list_selector_set(&ListSelectorSetParams { names: vec![] });
         match selector_sets {
             Err(_) => Err(FsError::GeneralFailure),
             Ok(result) => {
