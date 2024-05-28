@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::Selectors;
+use super::{SelectorStorage, Selectors};
 use thiserror::Error;
 
 // 定义 KVFileStorage 错误, 用于处理可能出现的错误情况
@@ -8,7 +8,7 @@ pub enum KVFileStorageError {
 }
 
 // KVFileStorage trait
-pub trait KVFileStorage {
+pub trait KVFileStorage: SelectorStorage {
     fn list_file(&self, params: ListFileParams) -> Result<ListFileResult, KVFileStorageError>;
 
     fn add_file(&self, params: AddFileParams) -> Result<AddFileResult, KVFileStorageError>;

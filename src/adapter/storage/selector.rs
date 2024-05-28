@@ -2,8 +2,6 @@ use mockall::automock;
 use std::fmt::Debug;
 use thiserror::Error;
 
-use super::SelectorSet;
-
 // 定义 SelectorStorage 错误, 用于处理可能出现的错误情况
 #[derive(Error, Debug)]
 pub enum SelectorStorageError {
@@ -15,17 +13,17 @@ pub enum SelectorStorageError {
 #[automock]
 pub trait SelectorStorage: Send + Sync + Debug {
     fn define_selector(
-        &self,
-        params: DefineSelectorParams,
+        &mut self,
+        params: &DefineSelectorParams,
     ) -> Result<DefineSelectorResult, SelectorStorageError>;
 
     fn list_selector(
         &self,
-        params: ListSelectorParams,
+        params: &ListSelectorParams,
     ) -> Result<ListSelectorResult, SelectorStorageError>;
 
     fn get_selector_by_key(&self, key: String) -> Result<Selector, SelectorStorageError> {
-        match self.list_selector(ListSelectorParams { key: vec![key] }) {
+        match self.list_selector(&ListSelectorParams { key: vec![key] }) {
             Ok(res) => match res.selectors.get(0) {
                 Some(v) => Ok(v.clone()),
                 None => Err(SelectorStorageError::NotFound),
@@ -70,7 +68,8 @@ pub struct ListSelectorParams {
 #[derive(Debug, Clone)]
 pub struct DefineSelectorParams {
     pub key: String,
-    // name: String,
+    pub default_value: String,
+    pub set_default_for_history: bool,
 }
 
 // 响应的结果定义
