@@ -75,6 +75,7 @@ pub struct DefineSelectorParams {
 // 响应的结果定义
 #[derive(Debug, Clone)]
 pub struct ListSelectorResult {
+    pub default_selector: Selectors,
     pub selectors: Selectors,
 }
 
