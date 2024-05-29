@@ -1,5 +1,5 @@
 use mockall::automock;
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 use thiserror::Error;
 
 // 定义 SelectorStorage 错误, 用于处理可能出现的错误情况
@@ -41,10 +41,14 @@ pub struct Selector {
     // TODO: 现在没想太清楚name的管理逻辑，所以先只留一个key好了
     // name: String,
     pub key: String,
-    pub value: Vec<String>,
+    pub value: HashSet<String>,
 }
 
 impl Selector {
+    pub fn new(key: String, value :String) -> Self {
+        Selector { key, value: vec![value].into_iter().collect() }
+    }
+
     pub fn is_missing_value(&self) -> bool {
         self.value.len() == 0
     }
@@ -54,7 +58,20 @@ impl Selector {
     }
 
     pub fn add_value(&mut self, value: String) {
-        self.value.push(value)
+        self.value.insert(value);
+    }
+
+    pub fn merge(&self, other :&Selector)-> Selector {
+        let mut value = self.value.clone();
+        for v in &other.value {
+            if !value.contains(v) {
+                value.insert(v.clone());
+            }
+        }
+        Selector {
+            key: self.key.clone(),
+            value: value,
+        }
     }
 }
 
