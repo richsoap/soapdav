@@ -1,5 +1,5 @@
 use mockall::automock;
-use std::{collections::HashSet, fmt::Debug};
+use std::{collections::{HashMap, HashSet}, fmt::Debug};
 use thiserror::Error;
 
 // 定义 SelectorStorage 错误, 用于处理可能出现的错误情况
@@ -72,6 +72,22 @@ impl Selector {
             key: self.key.clone(),
             value: value,
         }
+    }
+
+    pub fn is_match(&self, kvs: &HashMap<String, String>) -> bool {
+        match kvs.get(&self.key) {
+            Some(v) => self.value.contains(v),
+            None => false,
+        }
+    }
+
+    pub fn is_match_selectors(selectors: &Selectors, kvs: &HashMap<String, String>) -> bool {
+        for s in selectors {
+            if !s.is_match(kvs) {
+                return false;
+            }
+        }
+        true
     }
 }
 

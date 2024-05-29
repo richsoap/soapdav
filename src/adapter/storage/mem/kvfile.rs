@@ -5,13 +5,27 @@ use crate::adapter::storage::*;
 #[derive(Debug, Clone)]
 pub struct MemFileKVFileStorage {
     default_file: FileItem,
-    files: Vec<FileItem>,
+    files: HashMap<u64, FileItem>,
+    next_id: u64,
 }
 
 #[derive(Debug, Clone)]
 struct FileItem {
     id: u64,
     kvs: HashMap<String, String>,
+}
+
+impl Into<KVFile> for &FileItem {
+    fn into(self) -> KVFile {
+        KVFile {
+            id: self.id,
+            label: self
+                .kvs
+                .iter()
+                .map(|(k, v)| KV::new(k.clone(), v.clone()))
+                .collect(),
+        }
+    }
 }
 
 impl FileItem {
@@ -31,6 +45,12 @@ impl FileItem {
             value: value,
         }
     }
+
+    fn set_labels(&mut self, labels: HashMap<String, String>) {
+        for (k, v) in labels {
+            self.kvs.insert(k, v);
+        }
+    }
 }
 
 impl SelectorStorage for MemFileKVFileStorage {
@@ -41,7 +61,7 @@ impl SelectorStorage for MemFileKVFileStorage {
         self.default_file
             .kvs
             .insert(params.key.clone(), params.default_value.clone());
-        for item in &mut self.files {
+        for (_, item) in &mut self.files {
             if params.set_default_for_history {
                 item.kvs
                     .insert(params.key.clone(), params.default_value.clone());
@@ -62,7 +82,7 @@ impl SelectorStorage for MemFileKVFileStorage {
             .map(|s| (s.key.clone(), s.clone()))
             .collect();
         for file in &self.files {
-            for (k, v) in &file.kvs {
+            for (k, v) in &file.1.kvs {
                 match selectors.get_mut(k) {
                     Some(s) => s.add_value(v.clone()),
                     None => {
@@ -75,5 +95,62 @@ impl SelectorStorage for MemFileKVFileStorage {
             default_selector: default_selectors,
             selectors: selectors.iter().map(|(_k, v)| v.clone()).collect(),
         })
+    }
+}
+
+impl KVFileStorage for MemFileKVFileStorage {
+    fn list_file(&self, params: ListFileParams) -> Result<ListFileResult, KVFileStorageError> {
+        let files = self
+            .files
+            .iter()
+            .filter(|f| params.ids.is_empty() || params.ids.contains(&f.0))
+            .filter(|f| {
+                params.selectors.is_empty()
+                    || Selector::is_match_selectors(&params.selectors, &f.1.kvs)
+            })
+            .map(|f| f.1.into())
+            .collect();
+        Ok(ListFileResult { files })
+    }
+
+    fn add_file(&mut self, params: AddFileParams) -> Result<AddFileResult, KVFileStorageError> {
+        let mut new_file = self.default_file.clone();
+        for (k, v) in params.label {
+            new_file.kvs.insert(k, v);
+        }
+        new_file.id = self.next_id;
+        self.next_id += 1;
+        self.files.insert(new_file.id, new_file.clone());
+        Ok(AddFileResult {
+            id: new_file.id,
+            label: new_file.kvs,
+        })
+    }
+
+    fn remove_file(
+        &mut self,
+        params: RemoveFileParams,
+    ) -> Result<RemoveFileResult, KVFileStorageError> {
+        let amount = params
+            .ids
+            .iter()
+            .filter_map(|id| self.files.get(id))
+            .count();
+        for k in params.ids {
+            self.files.remove(&k);
+        }
+        Ok(RemoveFileResult { amount })
+    }
+
+    fn set_label(&mut self, params: SetLabelParams) -> Result<SetLabelResult, KVFileStorageError> {
+        match self.files.get_mut(&params.id) {
+            Some(v) => {
+                v.set_labels(params.label);
+                Ok(SetLabelResult {
+                    kvs: v.kvs.clone(),
+                })
+            }
+            None => Err(KVFileStorageError::NotFound),
+        }
     }
 }
