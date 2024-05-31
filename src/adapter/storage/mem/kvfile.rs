@@ -6,7 +6,17 @@ use crate::adapter::storage::*;
 pub struct MemFileKVFileStorage {
     default_file: FileItem,
     files: HashMap<u64, FileItem>,
-    next_id: u64,
+    last_id: u64,
+}
+
+impl MemFileKVFileStorage {
+    pub fn new() -> Self {
+        MemFileKVFileStorage{
+            default_file: FileItem::new(0),
+            files: HashMap::new(),
+            last_id: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +39,10 @@ impl Into<KVFile> for &FileItem {
 }
 
 impl FileItem {
+    fn new(id: u64) -> Self {
+        FileItem { id: id, kvs: HashMap::new() }
+    }
+
     fn to_selectors(&self, keys: &Vec<String>) -> Selectors {
         self.kvs
             .iter()
@@ -118,8 +132,8 @@ impl KVFileStorage for MemFileKVFileStorage {
         for (k, v) in params.label {
             new_file.kvs.insert(k, v);
         }
-        new_file.id = self.next_id;
-        self.next_id += 1;
+        self.last_id += 1;
+        new_file.id = self.last_id;
         self.files.insert(new_file.id, new_file.clone());
         Ok(AddFileResult {
             id: new_file.id,

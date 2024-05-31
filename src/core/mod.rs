@@ -1,4 +1,4 @@
 
-mod collectionfs;
+mod fs;
 
-pub use collectionfs::*;
+pub use fs::*;

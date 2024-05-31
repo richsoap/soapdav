@@ -1,7 +1,7 @@
 mod kvfile;
 mod selector;
 mod selector_set;
-mod mem;
+pub mod mem;
 
 
 pub use selector::*;

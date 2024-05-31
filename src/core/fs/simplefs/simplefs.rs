@@ -14,7 +14,7 @@ use webdav_handler::fs::{
 use crate::adapter::storage::{
     ListSelectorSetParams, SelectorSet, SelectorSetStorage, SelectorStorage,
 };
-use crate::core::collectionfs::CollectionFS;
+use crate::core::fs::CollectionFS;
 
 use super::staticdir::StaticDir;
 use super::staticfile::StaticFile;
@@ -159,20 +159,20 @@ impl DavFileSystem for SimpleFileSystem {
 impl CollectionFS for SimpleFileSystem {
     fn define_collection(
         &self,
-        params: crate::core::collectionfs::DefineCollectionParams,
+        params: crate::core::fs::DefineCollectionParams,
     ) -> Result<
-        crate::core::collectionfs::DefineCollectionResult,
-        crate::core::collectionfs::FilesystemError,
+        crate::core::fs::DefineCollectionResult,
+        crate::core::fs::FilesystemError,
     > {
         todo!()
     }
 
     fn remove_collection(
         &self,
-        params: crate::core::collectionfs::RemoveCollectionParams,
+        params: crate::core::fs::RemoveCollectionParams,
     ) -> Result<
-        crate::core::collectionfs::RemoveCollectionResult,
-        crate::core::collectionfs::FilesystemError,
+        crate::core::fs::RemoveCollectionResult,
+        crate::core::fs::FilesystemError,
     > {
         todo!()
     }

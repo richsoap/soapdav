@@ -8,8 +8,10 @@ use std::time::SystemTime;
 
 use hyper;
 use soapdav::adapter::storage::{
-    ListSelectorSetResult, MockSelectorSetStorage, SelectorSet, SelectorSetStorage,
+    mem::MemSelectorSetStorage, ListSelectorSetResult, MockSelectorSetStorage, SelectorSet,
+    SelectorSetStorage,
 };
+use soapdav::adapter::storage::{MemFileKVFileStorage, SelectorStorage};
 use soapdav::SimpleFileSystem;
 
 use log::{info, warn};
@@ -23,19 +25,11 @@ struct Server {
 
 impl Server {
     pub fn new() -> Self {
-        let mut selector_set_storage = MockSelectorSetStorage::new();
-        {
-            selector_set_storage
-                .expect_list_selector_set()
-                .returning(|_| {
-                    Ok(ListSelectorSetResult {
-                        selector_set: vec![SelectorSet::new(&String::from("a"))],
-                    })
-                });
-        }
+        let selector_set_storage = MemSelectorSetStorage::new();
+        let selector_storage = MemFileKVFileStorage::new();
         let simplefs = SimpleFileSystem {
-            selector_set_storage: (Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>) ,
-            selector_storage: todo!(),
+            selector_set_storage: (Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>),
+            selector_storage: (Arc::new(selector_storage) as Arc<dyn SelectorStorage>),
         };
         let config = DavHandler::builder()
             .filesystem(Box::new(simplefs))
