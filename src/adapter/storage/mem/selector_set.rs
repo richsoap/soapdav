@@ -33,7 +33,9 @@ impl SelectorSetStorage for MemSelectorSetStorage {
         for name in &params.names {
             self.selector_sets.remove(name);
         }
-        Ok(RemoveSelectorSetResult { names: params.names.clone() })
+        Ok(RemoveSelectorSetResult {
+            names: params.names.clone(),
+        })
     }
 
     fn list_selector_set<'a>(
@@ -47,6 +49,55 @@ impl SelectorSetStorage for MemSelectorSetStorage {
                 None => (),
             }
         }
-        Ok(ListSelectorSetResult{ selector_set: result })
+        Ok(ListSelectorSetResult {
+            selector_set: result,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mem_selector_set() {
+        let mut storage = MemSelectorSetStorage::new();
+        // define selector
+        {
+            let mut selector_sets = vec![];
+            selector_sets.push(SelectorSet::new(&String::from("first")));
+            selector_sets.push(SelectorSet::new(&String::from("second")));
+            selector_sets.push(SelectorSet::new(&String::from("third")));
+            let params = DefineSelectorSetParams {
+                selector_sets: selector_sets,
+            };
+            assert!(storage.define_selector_set(&params).is_ok());
+        }
+        // list selector
+        {
+            let params = ListSelectorSetParams{
+                names: vec![String::from("first"), String::from("second"), String::from("third")],
+            };
+            let result = storage.list_selector_set(&params);
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().selector_set.len(), 3);
+        }
+        // remove selector
+        {
+            let params = RemoveSelectorSetParams{
+                names: vec![String::from("first"), String::from("second")],
+            };
+            let result = storage.remove_selector_set(&params);
+            assert!(result.is_ok());
+        }
+        // list selector
+        {
+            let params = ListSelectorSetParams{
+                names: vec![String::from("first"), String::from("second"), String::from("third")],
+            };
+            let result = storage.list_selector_set(&params);
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().selector_set.len(), 1);
+        }
     }
 }
