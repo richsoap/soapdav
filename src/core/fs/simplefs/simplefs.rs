@@ -24,22 +24,22 @@ use super::staticfile::StaticFile;
 
 #[derive(Debug, Clone)]
 pub struct SimpleFileSystem {
-    pub selector_set_storage: Arc<RwLock<Box<dyn SelectorSetStorage>>>,
-    pub selector_storage: Arc<RwLock<Box<dyn SelectorStorage>>>,
-    pub kv_file: Arc<RwLock<Box<dyn KVFileStorage>>>,
+    pub selector_set_storage: Arc<RwLock<dyn SelectorSetStorage>>,
+    pub selector_storage: Arc<RwLock<dyn SelectorStorage>>,
+    pub kv_file: Arc<RwLock<dyn KVFileStorage>>,
     // 这里需要根据实际情况定义 CollectionFileSystem 的字段
 }
 
 impl SimpleFileSystem {
     pub fn new(
-        selector_set: Box<dyn SelectorSetStorage>,
-        selector: Box<dyn SelectorStorage>,
-        kv_file: Box<dyn KVFileStorage>,
+        selector_set_storage: Arc<RwLock<dyn SelectorSetStorage>>,
+        selector_storage: Arc<RwLock<dyn SelectorStorage>>,
+        kv_file: Arc<RwLock<dyn KVFileStorage>>,
     ) -> Self {
         SimpleFileSystem {
-            selector_set_storage: Arc::new(RwLock::new(selector_set)),
-            selector_storage: Arc::new(RwLock::new(selector)),
-            kv_file: Arc::new(RwLock::new(kv_file)),
+            selector_set_storage,
+            selector_storage,
+            kv_file,
         }
     }
 
