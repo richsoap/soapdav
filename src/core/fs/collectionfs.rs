@@ -1,6 +1,9 @@
+use std::fs::File;
+
+use thiserror::Error;
 use webdav_handler::fs::DavFileSystem;
 
-use crate::adapter::storage::SelectorSet;
+use crate::adapter::storage::{self, KVFileStorageError, SelectorSet, SelectorStorageError, KV};
 
 #[derive(Debug, Clone)]
 pub struct DefineCollectionParams {
@@ -20,12 +23,45 @@ pub struct RemoveCollectionParams {
 #[derive(Debug, Clone)]
 pub struct RemoveCollectionResult {}
 
-pub trait CollectionFS:DavFileSystem {
-    fn define_collection(&self, params: DefineCollectionParams) -> Result<DefineCollectionResult, FilesystemError>;
-    fn remove_collection(&self, params: RemoveCollectionParams) -> Result<RemoveCollectionResult, FilesystemError>;
+pub struct AddFileParams {
+    pub kvs: Vec<KV>,
 }
 
-#[derive(Debug, Clone)]
+pub struct AddFileResult {
+
+}
+
+pub type DefineSelectorParams = storage::DefineSelectorParams;
+
+pub struct DefineSelectorResult {}
+
+
+
+pub trait CollectionFS:DavFileSystem {
+    fn add_file(&mut self, params: &AddFileParams) -> Result<AddFileResult, FilesystemError>;
+    fn define_selector(&mut self, params: &DefineSelectorParams) -> Result<DefineSelectorResult, FilesystemError>;
+    fn define_collection(&mut self, params: &DefineCollectionParams) -> Result<DefineCollectionResult, FilesystemError>;
+    fn remove_collection(&self, params: &RemoveCollectionParams) -> Result<RemoveCollectionResult, FilesystemError>;
+}
+
+#[derive(Debug, Clone, Error)]
 pub enum FilesystemError {
-    // 这里定义 Filesystem 相关的错误
+    #[error("NotFound")]
+    NotFound,
+}
+
+impl From<SelectorStorageError> for FilesystemError {
+    fn from(value: SelectorStorageError) -> Self {
+        match value {
+            SelectorStorageError::NotFound => FilesystemError::NotFound,
+        }
+    }
+}
+
+impl From<KVFileStorageError> for FilesystemError {
+    fn from(value: KVFileStorageError) -> Self {
+        match value {
+            KVFileStorageError::NotFound => FilesystemError::NotFound,
+        }
+    }
 }

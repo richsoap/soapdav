@@ -1,5 +1,6 @@
+use std::borrow::Borrow;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::SystemTime;
 
 use futures::stream::iter;
@@ -12,21 +13,36 @@ use webdav_handler::fs::{
 };
 
 use crate::adapter::storage::{
-    ListSelectorSetParams, SelectorSet, SelectorSetStorage, SelectorStorage,
+    AddFileParams, KVFileStorage, ListSelectorSetParams, SelectorSet, SelectorSetStorage,
+    SelectorStorage, KV,
 };
 use crate::core::fs::CollectionFS;
+use crate::{AddFileResult, DefineSelectorResult, FilesystemError};
 
 use super::staticdir::StaticDir;
 use super::staticfile::StaticFile;
 
 #[derive(Debug, Clone)]
 pub struct SimpleFileSystem {
-    pub selector_set_storage: Arc<dyn SelectorSetStorage>,
-    pub selector_storage: Arc<dyn SelectorStorage>,
+    pub selector_set_storage: Arc<RwLock<Box<dyn SelectorSetStorage>>>,
+    pub selector_storage: Arc<RwLock<Box<dyn SelectorStorage>>>,
+    pub kv_file: Arc<RwLock<Box<dyn KVFileStorage>>>,
     // 这里需要根据实际情况定义 CollectionFileSystem 的字段
 }
 
 impl SimpleFileSystem {
+    pub fn new(
+        selector_set: Box<dyn SelectorSetStorage>,
+        selector: Box<dyn SelectorStorage>,
+        kv_file: Box<dyn KVFileStorage>,
+    ) -> Self {
+        SimpleFileSystem {
+            selector_set_storage: Arc::new(RwLock::new(selector_set)),
+            selector_storage: Arc::new(RwLock::new(selector)),
+            kv_file: Arc::new(RwLock::new(kv_file)),
+        }
+    }
+
     fn split_path(path: &DavPath) -> Result<Vec<String>, std::str::Utf8Error> {
         match percent_decode(path.as_bytes()).decode_utf8() {
             Ok(cs) => Ok(cs
@@ -53,6 +69,8 @@ impl SimpleFileSystem {
         // 构造筛选器组
         let mut selector_set = match self
             .selector_set_storage
+            .read()
+            .unwrap()
             .get_selector_set_by_name(&tokens.pop_front().unwrap())
         {
             Ok(v) => v,
@@ -63,14 +81,14 @@ impl SimpleFileSystem {
             let selector_value = tokens.pop_front().unwrap();
             // TODO: 带点的都是特殊说明文件，不是目录
             if selector_value.starts_with('.') {
-                return Err(FsError::NotFound)
+                return Err(FsError::NotFound);
             } else {
                 selector_set.add_required_value(selector_value);
             }
         }
         // 筛选器还没有满，找到下一个筛选项，并将可选结果以目录的形式返回
         if !selector_set.is_full() {
-            return self.read_selecting_dir_stream(selector_set, meta)
+            return self.read_selecting_dir_stream(selector_set, meta);
         }
         // TODO: 筛选器已填满，说明可以执行筛选操作
         Err(FsError::NotFound)
@@ -82,6 +100,8 @@ impl SimpleFileSystem {
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
         let selector_sets = self
             .selector_set_storage
+            .read()
+            .unwrap()
             .list_selector_set(&ListSelectorSetParams { names: vec![] });
         match selector_sets {
             Err(_) => Err(FsError::GeneralFailure),
@@ -105,6 +125,8 @@ impl SimpleFileSystem {
         let next_selector = selector_set.get_next_required_selector().unwrap();
         let next_selector = match self
             .selector_storage
+            .read()
+            .unwrap()
             .get_selector_by_key(next_selector.get_key())
         {
             Ok(v) => v,
@@ -158,22 +180,43 @@ impl DavFileSystem for SimpleFileSystem {
 
 impl CollectionFS for SimpleFileSystem {
     fn define_collection(
-        &self,
-        params: crate::core::fs::DefineCollectionParams,
-    ) -> Result<
-        crate::core::fs::DefineCollectionResult,
-        crate::core::fs::FilesystemError,
-    > {
+        &mut self,
+        params: &crate::core::fs::DefineCollectionParams,
+    ) -> Result<crate::core::fs::DefineCollectionResult, crate::core::fs::FilesystemError> {
         todo!()
     }
 
     fn remove_collection(
         &self,
-        params: crate::core::fs::RemoveCollectionParams,
-    ) -> Result<
-        crate::core::fs::RemoveCollectionResult,
-        crate::core::fs::FilesystemError,
-    > {
+        params: &crate::core::fs::RemoveCollectionParams,
+    ) -> Result<crate::core::fs::RemoveCollectionResult, crate::core::fs::FilesystemError> {
         todo!()
+    }
+
+    fn add_file(
+        &mut self,
+        params: &crate::core::fs::AddFileParams,
+    ) -> Result<crate::core::fs::AddFileResult, crate::core::fs::FilesystemError> {
+        match self.kv_file.write().unwrap().add_file(&AddFileParams {
+            label: KV::to_hash_map(&params.kvs),
+        }) {
+            Ok(_) => Ok(AddFileResult {}),
+            Err(e) => Err(FilesystemError::from(e)),
+        }
+    }
+
+    fn define_selector(
+        &mut self,
+        params: &crate::DefineSelectorParams,
+    ) -> Result<crate::DefineSelectorResult, crate::FilesystemError> {
+        match self
+            .selector_storage
+            .write()
+            .unwrap()
+            .define_selector(&params)
+        {
+            Ok(v) => Ok(DefineSelectorResult {}),
+            Err(e) => Err(FilesystemError::from(e)),
+        }
     }
 }

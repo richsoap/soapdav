@@ -60,9 +60,9 @@ impl FileItem {
         }
     }
 
-    fn set_labels(&mut self, labels: HashMap<String, String>) {
+    fn set_labels(&mut self, labels: &HashMap<String, String>) {
         for (k, v) in labels {
-            self.kvs.insert(k, v);
+            self.kvs.insert(k.clone(), v.clone());
         }
     }
 }
@@ -113,7 +113,7 @@ impl SelectorStorage for MemFileKVFileStorage {
 }
 
 impl KVFileStorage for MemFileKVFileStorage {
-    fn list_file(&self, params: ListFileParams) -> Result<ListFileResult, KVFileStorageError> {
+    fn list_file(&self, params: &ListFileParams) -> Result<ListFileResult, KVFileStorageError> {
         let files = self
             .files
             .iter()
@@ -127,10 +127,10 @@ impl KVFileStorage for MemFileKVFileStorage {
         Ok(ListFileResult { files })
     }
 
-    fn add_file(&mut self, params: AddFileParams) -> Result<AddFileResult, KVFileStorageError> {
+    fn add_file(&mut self, params: &AddFileParams) -> Result<AddFileResult, KVFileStorageError> {
         let mut new_file = self.default_file.clone();
-        for (k, v) in params.label {
-            new_file.kvs.insert(k, v);
+        for (k, v) in &params.label {
+            new_file.kvs.insert(k.clone(), v.clone());
         }
         self.last_id += 1;
         new_file.id = self.last_id;
@@ -143,23 +143,23 @@ impl KVFileStorage for MemFileKVFileStorage {
 
     fn remove_file(
         &mut self,
-        params: RemoveFileParams,
+        params: &RemoveFileParams,
     ) -> Result<RemoveFileResult, KVFileStorageError> {
         let amount = params
             .ids
             .iter()
             .filter_map(|id| self.files.get(id))
             .count();
-        for k in params.ids {
+        for k in params.ids.clone() {
             self.files.remove(&k);
         }
         Ok(RemoveFileResult { amount })
     }
 
-    fn set_label(&mut self, params: SetLabelParams) -> Result<SetLabelResult, KVFileStorageError> {
+    fn set_label(&mut self, params: &SetLabelParams) -> Result<SetLabelResult, KVFileStorageError> {
         match self.files.get_mut(&params.id) {
             Some(v) => {
-                v.set_labels(params.label);
+                v.set_labels(&params.label);
                 Ok(SetLabelResult {
                     kvs: v.kvs.clone(),
                 })
