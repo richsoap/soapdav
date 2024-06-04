@@ -12,17 +12,17 @@ pub enum SelectorStorageError {
 // SelectorStorage trait
 #[automock]
 pub trait SelectorStorage: Send + Sync + Debug {
-    fn define_selector(
-        &mut self,
-        params: &DefineSelectorParams,
+    fn define_selector<'a>(
+        &'a self,
+        params: &'a DefineSelectorParams,
     ) -> Result<DefineSelectorResult, SelectorStorageError>;
 
-    fn list_selector(
-        &self,
-        params: &ListSelectorParams,
+    fn list_selector<'a>(
+        &'a self,
+        params: &'a ListSelectorParams,
     ) -> Result<ListSelectorResult, SelectorStorageError>;
 
-    fn get_selector_by_key(&self, key: String) -> Result<Selector, SelectorStorageError> {
+    fn get_selector_by_key<'a >(&'a self, key: String) -> Result<Selector, SelectorStorageError> {
         match self.list_selector(&ListSelectorParams { key: vec![key] }) {
             Ok(res) => match res.selectors.get(0) {
                 Some(v) => Ok(v.clone()),

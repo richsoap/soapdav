@@ -15,13 +15,13 @@ pub enum SelectorSetStorageError {
 // TODO:(yangqinglong) add modifier selector_set api
 #[automock]
 pub trait SelectorSetStorage: Send + Sync + Debug {
-    fn define_selector_set(&mut self, params: &DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;
+    fn define_selector_set<'a >(&'a self, params: &'a DefineSelectorSetParams) -> Result<DefineSelectorSetResult, SelectorSetStorageError>;
     
-    fn remove_selector_set(&mut self, params: &RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
+    fn remove_selector_set<'a >(&'a  self, params: &'a RemoveSelectorSetParams) -> Result<RemoveSelectorSetResult, SelectorSetStorageError>;
     
-    fn list_selector_set<'a>(&self, params: &ListSelectorSetParams) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
+    fn list_selector_set<'a>(&self, params: &'a ListSelectorSetParams) -> Result<ListSelectorSetResult, SelectorSetStorageError>;
 
-    fn get_selector_set_by_name<'a>(&self,name: &String) -> Result<SelectorSet, SelectorSetStorageError> {
+    fn get_selector_set_by_name<'a>(&self,name: &'a String) -> Result<SelectorSet, SelectorSetStorageError> {
         let params = ListSelectorSetParams{
             names: vec![name.to_string()],
         };

@@ -11,14 +11,25 @@ pub enum KVFileStorageError {
 
 // KVFileStorage trait
 pub trait KVFileStorage: SelectorStorage {
-    fn list_file(&self, params: &ListFileParams) -> Result<ListFileResult, KVFileStorageError>;
+    fn list_file<'a>(
+        &'a self,
+        params: &'a ListFileParams,
+    ) -> Result<ListFileResult, KVFileStorageError>;
 
-    fn add_file(&mut self, params: &AddFileParams) -> Result<AddFileResult, KVFileStorageError>;
+    fn add_file<'a>(
+        &'a self,
+        params: &'a AddFileParams,
+    ) -> Result<AddFileResult, KVFileStorageError>;
 
-    fn remove_file(&mut self, params: &RemoveFileParams)
-        -> Result<RemoveFileResult, KVFileStorageError>;
+    fn remove_file<'a>(
+        &'a self,
+        params: &'a RemoveFileParams,
+    ) -> Result<RemoveFileResult, KVFileStorageError>;
 
-    fn set_label(&mut self, params: &SetLabelParams) -> Result<SetLabelResult, KVFileStorageError>;
+    fn set_label<'a>(
+        &'a self,
+        params: &'a SetLabelParams,
+    ) -> Result<SetLabelResult, KVFileStorageError>;
 }
 
 // KV 定义
@@ -47,19 +58,19 @@ impl KV {
         }
     }
 
-    pub fn from_pair((k,v):(&String,&String)) ->KV {
-        KV::new(k.clone(),v.clone())
+    pub fn from_pair((k, v): (&String, &String)) -> KV {
+        KV::new(k.clone(), v.clone())
     }
 
-    pub fn to_pair(&self) -> (String,String) {
+    pub fn to_pair(&self) -> (String, String) {
         (self.key.clone(), self.value.clone())
     }
 
-    pub fn to_hash_map(kvs: &KVs) -> HashMap<String,String> {
+    pub fn to_hash_map(kvs: &KVs) -> HashMap<String, String> {
         kvs.iter().map(KV::to_pair).collect()
     }
 
-    pub fn from_hash_map(kvs: HashMap<String,String>) -> KVs {
+    pub fn from_hash_map(kvs: HashMap<String, String>) -> KVs {
         kvs.iter().map(KV::from_pair).collect()
     }
 }

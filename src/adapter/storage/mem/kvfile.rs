@@ -1,20 +1,20 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::adapter::storage::*;
+use crate::{adapter::storage::*, Shared};
 
 #[derive(Debug, Clone)]
 pub struct MemFileKVFileStorage {
-    default_file: FileItem,
-    files: HashMap<u64, FileItem>,
-    last_id: u64,
+    default_file: Shared<FileItem>,
+    files: Shared<HashMap<u64, FileItem>>,
+    last_id: Shared<u64>,
 }
 
 impl MemFileKVFileStorage {
     pub fn new() -> Self {
-        MemFileKVFileStorage{
-            default_file: FileItem::new(0),
-            files: HashMap::new(),
-            last_id: 0,
+        MemFileKVFileStorage {
+            default_file: Shared::new(FileItem::new(0)),
+            files: Shared::new(HashMap::new()),
+            last_id: Shared::new(0),
         }
     }
 }
@@ -40,7 +40,10 @@ impl Into<KVFile> for &FileItem {
 
 impl FileItem {
     fn new(id: u64) -> Self {
-        FileItem { id: id, kvs: HashMap::new() }
+        FileItem {
+            id: id,
+            kvs: HashMap::new(),
+        }
     }
 
     fn to_selectors(&self, keys: &Vec<String>) -> Selectors {
@@ -68,14 +71,15 @@ impl FileItem {
 }
 
 impl SelectorStorage for MemFileKVFileStorage {
-    fn define_selector(
-        &mut self,
-        params: &DefineSelectorParams,
+    fn define_selector<'a>(
+        &'a self,
+        params: &'a DefineSelectorParams,
     ) -> Result<DefineSelectorResult, SelectorStorageError> {
         self.default_file
+            .write()
             .kvs
             .insert(params.key.clone(), params.default_value.clone());
-        for (_, item) in &mut self.files {
+        for (_, item) in self.files.write().iter_mut() {
             if params.set_default_for_history {
                 item.kvs
                     .insert(params.key.clone(), params.default_value.clone());
@@ -86,16 +90,16 @@ impl SelectorStorage for MemFileKVFileStorage {
         Ok(DefineSelectorResult {})
     }
 
-    fn list_selector(
-        &self,
-        params: &ListSelectorParams,
+    fn list_selector<'a>(
+        &'a self,
+        params: &'a ListSelectorParams,
     ) -> Result<ListSelectorResult, SelectorStorageError> {
-        let default_selectors = self.default_file.to_selectors(&params.key);
+        let default_selectors = self.default_file.read().to_selectors(&params.key);
         let mut selectors: HashMap<String, Selector> = default_selectors
             .iter()
             .map(|s| (s.key.clone(), s.clone()))
             .collect();
-        for file in &self.files {
+        for file in self.files.read().iter() {
             for (k, v) in &file.1.kvs {
                 match selectors.get_mut(k) {
                     Some(s) => s.add_value(v.clone()),
@@ -113,9 +117,13 @@ impl SelectorStorage for MemFileKVFileStorage {
 }
 
 impl KVFileStorage for MemFileKVFileStorage {
-    fn list_file(&self, params: &ListFileParams) -> Result<ListFileResult, KVFileStorageError> {
+    fn list_file<'a>(
+        &'a self,
+        params: &'a ListFileParams,
+    ) -> Result<ListFileResult, KVFileStorageError> {
         let files = self
             .files
+            .read()
             .iter()
             .filter(|f| params.ids.is_empty() || params.ids.contains(&f.0))
             .filter(|f| {
@@ -127,42 +135,53 @@ impl KVFileStorage for MemFileKVFileStorage {
         Ok(ListFileResult { files })
     }
 
-    fn add_file(&mut self, params: &AddFileParams) -> Result<AddFileResult, KVFileStorageError> {
-        let mut new_file = self.default_file.clone();
+    fn add_file<'a>(
+        &'a self,
+        params: &'a AddFileParams,
+    ) -> Result<AddFileResult, KVFileStorageError> {
+        let mut new_file = self.default_file.read().clone();
         for (k, v) in &params.label {
             new_file.kvs.insert(k.clone(), v.clone());
         }
-        self.last_id += 1;
-        new_file.id = self.last_id;
-        self.files.insert(new_file.id, new_file.clone());
+        // TODO: 改成原子
+        *self.last_id.write() += 1;
+        new_file.id = *self.last_id.read();
+        self.files.write().insert(new_file.id, new_file.clone());
         Ok(AddFileResult {
             id: new_file.id,
             label: new_file.kvs,
         })
     }
 
-    fn remove_file(
-        &mut self,
-        params: &RemoveFileParams,
+    fn remove_file<'a>(
+        &'a self,
+        params: &'a RemoveFileParams,
     ) -> Result<RemoveFileResult, KVFileStorageError> {
         let amount = params
             .ids
             .iter()
-            .filter_map(|id| self.files.get(id))
+            .filter_map(|id| {
+                if self.files.read().contains_key(id) {
+                    return Some(1);
+                } else {
+                    return None;
+                }
+            })
             .count();
         for k in params.ids.clone() {
-            self.files.remove(&k);
+            self.files.write().remove(&k);
         }
         Ok(RemoveFileResult { amount })
     }
 
-    fn set_label(&mut self, params: &SetLabelParams) -> Result<SetLabelResult, KVFileStorageError> {
-        match self.files.get_mut(&params.id) {
+    fn set_label<'a>(
+        &'a self,
+        params: &'a SetLabelParams,
+    ) -> Result<SetLabelResult, KVFileStorageError> {
+        match self.files.write().get_mut(&params.id) {
             Some(v) => {
                 v.set_labels(&params.label);
-                Ok(SetLabelResult {
-                    kvs: v.kvs.clone(),
-                })
+                Ok(SetLabelResult { kvs: v.kvs.clone() })
             }
             None => Err(KVFileStorageError::NotFound),
         }
