@@ -1,6 +1,5 @@
-use std::borrow::Borrow;
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use futures::stream::iter;
@@ -24,17 +23,17 @@ use super::staticfile::StaticFile;
 
 #[derive(Debug, Clone)]
 pub struct SimpleFileSystem {
-    pub selector_set_storage: Arc<RwLock<dyn SelectorSetStorage>>,
-    pub selector_storage: Arc<RwLock<dyn SelectorStorage>>,
-    pub kv_file: Arc<RwLock<dyn KVFileStorage>>,
+    pub selector_set_storage: Arc<dyn SelectorSetStorage>,
+    pub selector_storage: Arc<dyn SelectorStorage>,
+    pub kv_file: Arc<dyn KVFileStorage>,
     // 这里需要根据实际情况定义 CollectionFileSystem 的字段
 }
 
 impl SimpleFileSystem {
     pub fn new(
-        selector_set_storage: Arc<RwLock<dyn SelectorSetStorage>>,
-        selector_storage: Arc<RwLock<dyn SelectorStorage>>,
-        kv_file: Arc<RwLock<dyn KVFileStorage>>,
+        selector_set_storage: Arc<dyn SelectorSetStorage>,
+        selector_storage: Arc<dyn SelectorStorage>,
+        kv_file: Arc<dyn KVFileStorage>,
     ) -> Self {
         SimpleFileSystem {
             selector_set_storage,
@@ -69,8 +68,6 @@ impl SimpleFileSystem {
         // 构造筛选器组
         let mut selector_set = match self
             .selector_set_storage
-            .read()
-            .unwrap()
             .get_selector_set_by_name(&tokens.pop_front().unwrap())
         {
             Ok(v) => v,
@@ -100,8 +97,6 @@ impl SimpleFileSystem {
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
         let selector_sets = self
             .selector_set_storage
-            .read()
-            .unwrap()
             .list_selector_set(&ListSelectorSetParams { names: vec![] });
         match selector_sets {
             Err(_) => Err(FsError::GeneralFailure),
@@ -125,8 +120,6 @@ impl SimpleFileSystem {
         let next_selector = selector_set.get_next_required_selector().unwrap();
         let next_selector = match self
             .selector_storage
-            .read()
-            .unwrap()
             .get_selector_by_key(next_selector.get_key())
         {
             Ok(v) => v,
@@ -197,7 +190,7 @@ impl CollectionFS for SimpleFileSystem {
         &mut self,
         params: &crate::core::fs::AddFileParams,
     ) -> Result<crate::core::fs::AddFileResult, crate::core::fs::FilesystemError> {
-        match self.kv_file.write().unwrap().add_file(&AddFileParams {
+        match self.kv_file.add_file(&AddFileParams {
             label: KV::to_hash_map(&params.kvs),
         }) {
             Ok(_) => Ok(AddFileResult {}),
@@ -211,8 +204,6 @@ impl CollectionFS for SimpleFileSystem {
     ) -> Result<crate::DefineSelectorResult, crate::FilesystemError> {
         match self
             .selector_storage
-            .write()
-            .unwrap()
             .define_selector(&params)
         {
             Ok(v) => Ok(DefineSelectorResult {}),

@@ -143,7 +143,6 @@ impl KVFileStorage for MemFileKVFileStorage {
         for (k, v) in &params.label {
             new_file.kvs.insert(k.clone(), v.clone());
         }
-        // TODO: 改成原子
         *self.last_id.write() += 1;
         new_file.id = *self.last_id.read();
         self.files.write().insert(new_file.id, new_file.clone());

@@ -3,18 +3,16 @@ use std::error::Error;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
-use std::time::SystemTime;
+use std::sync::Arc;
 
 use hyper;
-use soapdav::adapter::storage::{
-    mem::MemSelectorSetStorage, ListSelectorSetResult, MockSelectorSetStorage, SelectorSet,
-    SelectorSetStorage,
-};
-use soapdav::adapter::storage::{KVFileStorage, MemFileKVFileStorage, SelectorStorage};
+use soapdav::adapter::storage::
+    mem::MemSelectorSetStorage
+;
+use soapdav::adapter::storage::MemFileKVFileStorage;
 use soapdav::SimpleFileSystem;
 
-use log::{info, warn};
+use log::info;
 use webdav_handler::body::Body;
 use webdav_handler::{fakels, DavHandler};
 
@@ -25,8 +23,8 @@ struct Server {
 
 impl Server {
     pub fn new() -> Self {
-        let selector_set_storage =Arc::new(RwLock::new(MemSelectorSetStorage::new()));
-        let new_kv =Arc::new(RwLock::new(MemFileKVFileStorage::new()));
+        let selector_set_storage =Arc::new(MemSelectorSetStorage::new());
+        let new_kv =Arc::new(MemFileKVFileStorage::new());
         let simplefs = SimpleFileSystem::new(
             selector_set_storage,
             new_kv.clone(),
