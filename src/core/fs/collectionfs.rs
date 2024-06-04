@@ -3,21 +3,20 @@ use std::fs::File;
 use thiserror::Error;
 use webdav_handler::fs::DavFileSystem;
 
-use crate::adapter::storage::{self, KVFileStorageError, SelectorSet, SelectorStorageError, KV};
+use crate::adapter::storage::{self, KVFileStorageError, SelectorSet, SelectorSetStorageError, SelectorStorageError, KV};
 
 #[derive(Debug, Clone)]
 pub struct DefineCollectionParams {
-    selector_set: SelectorSet,
+    pub selector_set: SelectorSet,
 }
 
 #[derive(Debug, Clone)]
 pub struct DefineCollectionResult {
-    id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct RemoveCollectionParams {
-    name: Vec<String>,
+    pub name: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,10 +37,10 @@ pub struct DefineSelectorResult {}
 
 
 pub trait CollectionFS:DavFileSystem {
-    fn add_file(&mut self, params: &AddFileParams) -> Result<AddFileResult, FilesystemError>;
-    fn define_selector(&mut self, params: &DefineSelectorParams) -> Result<DefineSelectorResult, FilesystemError>;
-    fn define_collection(&mut self, params: &DefineCollectionParams) -> Result<DefineCollectionResult, FilesystemError>;
-    fn remove_collection(&self, params: &RemoveCollectionParams) -> Result<RemoveCollectionResult, FilesystemError>;
+    fn add_file<'a>(&'a self, params: &'a AddFileParams) -> Result<AddFileResult, FilesystemError>;
+    fn define_selector<'a >(&'a  self, params: &'a DefineSelectorParams) -> Result<DefineSelectorResult, FilesystemError>;
+    fn define_collection<'a >(&'a self, params: &'a DefineCollectionParams) -> Result<DefineCollectionResult, FilesystemError>;
+    fn remove_collection<'a >(&'a self, params: &'a RemoveCollectionParams) -> Result<RemoveCollectionResult, FilesystemError>;
 }
 
 #[derive(Debug, Clone, Error)]
@@ -62,6 +61,14 @@ impl From<KVFileStorageError> for FilesystemError {
     fn from(value: KVFileStorageError) -> Self {
         match value {
             KVFileStorageError::NotFound => FilesystemError::NotFound,
+        }
+    }
+}
+
+impl From<SelectorSetStorageError> for FilesystemError {
+    fn from(value: SelectorSetStorageError) -> Self {
+        match value {
+            SelectorSetStorageError::NotFound => FilesystemError::NotFound,
         }
     }
 }

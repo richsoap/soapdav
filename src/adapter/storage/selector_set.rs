@@ -103,7 +103,6 @@ pub struct ListSelectorSetParams {
 // 响应的结果定义
 #[derive(Debug, Clone)]
 pub struct DefineSelectorSetResult {
-
 }
 
 #[derive(Debug, Clone)]

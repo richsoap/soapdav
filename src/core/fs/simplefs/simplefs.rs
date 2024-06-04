@@ -12,14 +12,14 @@ use webdav_handler::fs::{
 };
 
 use crate::adapter::storage::{
-    AddFileParams, KVFileStorage, ListSelectorSetParams, SelectorSet, SelectorSetStorage,
-    SelectorStorage, KV,
+    AddFileParams, DefineSelectorSetParams, KVFileStorage, ListSelectorSetParams, SelectorSet, SelectorSetStorage, SelectorStorage, KV
 };
-use crate::core::fs::CollectionFS;
+use CollectionFS;
 use crate::{AddFileResult, DefineSelectorResult, FilesystemError};
 
 use super::staticdir::StaticDir;
 use super::staticfile::StaticFile;
+use crate::core::fs::*;
 
 #[derive(Debug, Clone)]
 pub struct SimpleFileSystem {
@@ -172,24 +172,29 @@ impl DavFileSystem for SimpleFileSystem {
 }
 
 impl CollectionFS for SimpleFileSystem {
-    fn define_collection(
-        &mut self,
-        params: &crate::core::fs::DefineCollectionParams,
-    ) -> Result<crate::core::fs::DefineCollectionResult, crate::core::fs::FilesystemError> {
+    fn define_collection<'a>(
+        &'a self,
+        params: &'a DefineCollectionParams,
+    ) -> Result<DefineCollectionResult, FilesystemError> {
+        match self.selector_set_storage.define_selector_set(&DefineSelectorSetParams{
+            selector_sets: vec![params.selector_set.clone()],
+        }) {
+            Ok(v) => Ok(DefineCollectionResult{ }),
+            Err(e) => Err(FilesystemError::from(e)),
+        }
+    }
+
+    fn remove_collection<'a>(
+        &'a self,
+        params: &'a RemoveCollectionParams,
+    ) -> Result<RemoveCollectionResult, FilesystemError> {
         todo!()
     }
 
-    fn remove_collection(
-        &self,
-        params: &crate::core::fs::RemoveCollectionParams,
-    ) -> Result<crate::core::fs::RemoveCollectionResult, crate::core::fs::FilesystemError> {
-        todo!()
-    }
-
-    fn add_file(
-        &mut self,
-        params: &crate::core::fs::AddFileParams,
-    ) -> Result<crate::core::fs::AddFileResult, crate::core::fs::FilesystemError> {
+    fn add_file<'a>(
+        &'a self,
+        params: &'a collectionfs::AddFileParams,
+    ) -> Result<AddFileResult, FilesystemError> {
         match self.kv_file.add_file(&AddFileParams {
             label: KV::to_hash_map(&params.kvs),
         }) {
@@ -198,14 +203,11 @@ impl CollectionFS for SimpleFileSystem {
         }
     }
 
-    fn define_selector(
-        &mut self,
-        params: &crate::DefineSelectorParams,
+    fn define_selector<'a>(
+        &'a self,
+        params: &'a crate::DefineSelectorParams,
     ) -> Result<crate::DefineSelectorResult, crate::FilesystemError> {
-        match self
-            .selector_storage
-            .define_selector(&params)
-        {
+        match self.selector_storage.define_selector(&params) {
             Ok(v) => Ok(DefineSelectorResult {}),
             Err(e) => Err(FilesystemError::from(e)),
         }
