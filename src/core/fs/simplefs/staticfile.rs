@@ -4,6 +4,8 @@ use bytes::Bytes;
 use futures::FutureExt;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
+use crate::adapter::storage::KV;
+
 #[derive(Debug, Clone)]
 pub struct StaticFile {
     name: String,
@@ -54,6 +56,18 @@ impl DavDirEntry for StaticFile {
         }.boxed()
     }
 }
+
+impl From<&KV> for StaticFile {
+    fn from(kv: &KV) -> Self {
+        let mut name = String::new();
+        name.push('.');
+        name.push_str(&kv.key);
+        name.push('=');
+        name.push_str(&kv.value);
+        StaticFile::new(name, None,None)
+    }
+}
+
 
 impl DavFile for StaticFile {
     fn metadata<'a>(&'a mut self) -> webdav_handler::fs::FsFuture<Box<dyn DavMetaData>> {

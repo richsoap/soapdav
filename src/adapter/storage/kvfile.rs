@@ -35,8 +35,8 @@ pub trait KVFileStorage: SelectorStorage {
 // KV 定义
 #[derive(Debug, Clone)]
 pub struct KV {
-    key: String,
-    value: String,
+    pub key: String,
+    pub value: String,
 }
 
 pub type KVs = Vec<KV>;
@@ -49,6 +49,13 @@ impl KV {
             }
         }
         None
+    }
+
+    pub fn find_value_default(kvs: &KVs, key: &String, default_value: String) -> String {
+        match KV::find_value(kvs, key) {
+            Some(v) => v,
+            None => default_value,
+        }
     }
 
     pub fn new(key: String, value: String) -> KV {

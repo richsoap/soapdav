@@ -12,10 +12,11 @@ use webdav_handler::fs::{
 };
 
 use crate::adapter::storage::{
-    AddFileParams, DefineSelectorSetParams, KVFileStorage, ListSelectorSetParams, SelectorSet, SelectorSetStorage, SelectorStorage, KV
+    AddFileParams, DefineSelectorSetParams, KVFileStorage, ListFileParams, ListSelectorSetParams,
+    RemoveSelectorSetParams, Selector, SelectorSet, SelectorSetStorage, SelectorStorage, KV,
 };
-use CollectionFS;
 use crate::{AddFileResult, DefineSelectorResult, FilesystemError};
+use CollectionFS;
 
 use super::staticdir::StaticDir;
 use super::staticfile::StaticFile;
@@ -87,8 +88,12 @@ impl SimpleFileSystem {
         if !selector_set.is_full() {
             return self.read_selecting_dir_stream(selector_set, meta);
         }
-        // TODO: 筛选器已填满，说明可以执行筛选操作
-        Err(FsError::NotFound)
+        // 参数量刚好填满筛选器，说明需要返回文件列表
+        if tokens.is_empty() {
+            return self.read_matching_dir_stream(selector_set, meta);
+        }
+        // 进入到下一层，返回文件信息
+        return self.read_file_meta_dir_stream(selector_set, &mut tokens, meta);
     }
 
     fn read_root_dir_stream<'a>(
@@ -134,6 +139,59 @@ impl SimpleFileSystem {
         dirs.push(Box::new(StaticFile::new(next_selector.key, None, None)) as Box<dyn DavDirEntry>);
         Ok(Box::pin(iter(dirs)))
     }
+
+    fn read_matching_dir_stream<'a>(
+        &'a self,
+        selector_set: SelectorSet,
+        meta: ReadDirMeta,
+    ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
+        let mut selectors = selector_set.static_selectors.clone();
+        selectors.extend(selector_set.dynamic_selectors);
+        let files = match self.kv_file.list_file(&ListFileParams {
+            selectors: selectors,
+            ids: vec![],
+        }) {
+            Ok(r) => r.files,
+            Err(_) => return Err(FsError::NotFound),
+        };
+        let dirs: Vec<Box<dyn DavDirEntry>> = files
+            .iter()
+            .map(StaticDir::from)
+            .map(|x| Box::new(x) as Box<dyn DavDirEntry>)
+            .collect();
+        Ok(Box::pin(iter(dirs)))
+    }
+
+    fn read_file_meta_dir_stream<'a>(
+        &'a self,
+        selector_set: SelectorSet,
+        tokens: &mut VecDeque<String>,
+        meta: ReadDirMeta,
+    ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
+        let mut selectors = selector_set.static_selectors.clone();
+        selectors.push(Selector::new(
+            String::from(TITLE),
+            tokens.pop_front().unwrap(),
+        ));
+        selectors.extend(selector_set.dynamic_selectors);
+        let file = match self.kv_file.list_file(&ListFileParams {
+            selectors: selectors,
+            ids: vec![],
+        }) {
+            Ok(r) => match r.files.get(0) {
+                Some(v) => v.clone(),
+                None => return Err(FsError::NotFound),
+            },
+            Err(_) => return Err(FsError::NotFound),
+        };
+        let dirs: Vec<Box<dyn DavDirEntry>> = file
+            .label
+            .iter()
+            .map(StaticFile::from)
+            .map(|x| Box::new(x) as Box<dyn DavDirEntry>)
+            .collect();
+        Ok(Box::pin(iter(dirs)))
+    }
 }
 
 impl DavFileSystem for SimpleFileSystem {
@@ -176,10 +234,12 @@ impl CollectionFS for SimpleFileSystem {
         &'a self,
         params: &'a DefineCollectionParams,
     ) -> Result<DefineCollectionResult, FilesystemError> {
-        match self.selector_set_storage.define_selector_set(&DefineSelectorSetParams{
-            selector_sets: vec![params.selector_set.clone()],
-        }) {
-            Ok(v) => Ok(DefineCollectionResult{ }),
+        match self
+            .selector_set_storage
+            .define_selector_set(&DefineSelectorSetParams {
+                selector_sets: vec![params.selector_set.clone()],
+            }) {
+            Ok(_) => Ok(DefineCollectionResult {}),
             Err(e) => Err(FilesystemError::from(e)),
         }
     }
@@ -188,7 +248,14 @@ impl CollectionFS for SimpleFileSystem {
         &'a self,
         params: &'a RemoveCollectionParams,
     ) -> Result<RemoveCollectionResult, FilesystemError> {
-        todo!()
+        match self
+            .selector_set_storage
+            .remove_selector_set(&RemoveSelectorSetParams {
+                names: params.name.clone(),
+            }) {
+            Ok(_) => Ok(RemoveCollectionResult {}),
+            Err(e) => Err(FilesystemError::from(e)),
+        }
     }
 
     fn add_file<'a>(
@@ -208,7 +275,7 @@ impl CollectionFS for SimpleFileSystem {
         params: &'a crate::DefineSelectorParams,
     ) -> Result<crate::DefineSelectorResult, crate::FilesystemError> {
         match self.selector_storage.define_selector(&params) {
-            Ok(v) => Ok(DefineSelectorResult {}),
+            Ok(_) => Ok(DefineSelectorResult {}),
             Err(e) => Err(FilesystemError::from(e)),
         }
     }
