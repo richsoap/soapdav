@@ -1,4 +1,5 @@
 use mockall::automock;
+use serde::{Deserialize, Serialize};
 use std::{collections::{HashMap, HashSet}, fmt::Debug};
 use thiserror::Error;
 
@@ -36,7 +37,7 @@ pub trait SelectorStorage: Send + Sync + Debug {
 pub type Selectors = Vec<Selector>;
 
 // Selector 的定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Selector {
     // TODO: 现在没想太清楚name的管理逻辑，所以先只留一个key好了
     // name: String,
@@ -92,13 +93,13 @@ impl Selector {
 }
 
 // 请求的参数定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListSelectorParams {
     pub key: Vec<String>,
     // name: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineSelectorParams {
     pub key: String,
     pub default_value: String,
@@ -106,11 +107,11 @@ pub struct DefineSelectorParams {
 }
 
 // 响应的结果定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListSelectorResult {
     pub default_selector: Selectors,
     pub selectors: Selectors,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineSelectorResult {}

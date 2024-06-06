@@ -1,5 +1,6 @@
 use super::{SelectorStorage, Selectors};
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // 定义 KVFileStorage 错误, 用于处理可能出现的错误情况
@@ -33,7 +34,7 @@ pub trait KVFileStorage: SelectorStorage {
 }
 
 // KV 定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KV {
     pub key: String,
     pub value: String,

@@ -2,15 +2,17 @@ use std::fs::File;
 
 use thiserror::Error;
 use webdav_handler::fs::DavFileSystem;
+use serde::{Deserialize, Serialize};
+
 
 use crate::adapter::storage::{self, KVFileStorageError, SelectorSet, SelectorSetStorageError, SelectorStorageError, KV};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineCollectionParams {
     pub selector_set: SelectorSet,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineCollectionResult {
 }
 
@@ -19,19 +21,22 @@ pub struct RemoveCollectionParams {
     pub name: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemoveCollectionResult {}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddFileParams {
     pub kvs: Vec<KV>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddFileResult {
 
 }
 
 pub type DefineSelectorParams = storage::DefineSelectorParams;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineSelectorResult {}
 
 

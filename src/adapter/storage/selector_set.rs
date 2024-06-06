@@ -2,6 +2,7 @@ use std::{fmt::Debug, time};
 
 use super::{Selector, Selectors};
 use mockall::automock;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // 定义 SelectorSetStorage 错误, 用于处理可能出现的错误情况
@@ -37,7 +38,7 @@ pub trait SelectorSetStorage: Send + Sync + Debug {
 }
 
 // SelectorSet 的定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SelectorSet {
     pub name: String,
     pub static_selectors: Selectors,
