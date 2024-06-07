@@ -16,7 +16,7 @@ pub struct DefineCollectionParams {
 pub struct DefineCollectionResult {
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemoveCollectionParams {
     pub name: Vec<String>,
 }
