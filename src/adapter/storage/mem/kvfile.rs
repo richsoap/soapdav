@@ -140,8 +140,8 @@ impl KVFileStorage for MemFileKVFileStorage {
         params: &'a AddFileParams,
     ) -> Result<AddFileResult, KVFileStorageError> {
         let mut new_file = self.default_file.read().clone();
-        for (k, v) in &params.label {
-            new_file.kvs.insert(k.clone(), v.clone());
+        for kv in &params.label {
+            new_file.kvs.insert(kv.key.clone(), kv.value.clone());
         }
         *self.last_id.write() += 1;
         new_file.id = *self.last_id.read();

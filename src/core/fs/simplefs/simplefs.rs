@@ -263,7 +263,7 @@ impl CollectionFS for SimpleFileSystem {
         params: &'a collectionfs::AddFileParams,
     ) -> Result<AddFileResult, FilesystemError> {
         match self.kv_file.add_file(&AddFileParams {
-            label: KV::to_hash_map(&params.kvs),
+            label: params.kvs.clone(),
         }) {
             Ok(_) => Ok(AddFileResult {}),
             Err(e) => Err(FilesystemError::from(e)),

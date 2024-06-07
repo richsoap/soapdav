@@ -125,7 +125,7 @@ pub struct RemoveFileResult {
 
 #[derive(Debug, Clone)]
 pub struct AddFileParams {
-    pub label: HashMap<String, String>,
+    pub label: Vec<KV>,
 }
 
 #[derive(Debug, Clone)]
