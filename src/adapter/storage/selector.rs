@@ -1,6 +1,9 @@
 use mockall::automock;
 use serde::{Deserialize, Serialize};
-use std::{collections::{HashMap, HashSet}, fmt::Debug};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
 use thiserror::Error;
 
 // 定义 SelectorStorage 错误, 用于处理可能出现的错误情况
@@ -23,7 +26,7 @@ pub trait SelectorStorage: Send + Sync + Debug {
         params: &'a ListSelectorParams,
     ) -> Result<ListSelectorResult, SelectorStorageError>;
 
-    fn get_selector_by_key<'a >(&'a self, key: String) -> Result<Selector, SelectorStorageError> {
+    fn get_selector_by_key<'a>(&'a self, key: String) -> Result<Selector, SelectorStorageError> {
         match self.list_selector(&ListSelectorParams { key: vec![key] }) {
             Ok(res) => match res.selectors.get(0) {
                 Some(v) => Ok(v.clone()),
@@ -46,15 +49,18 @@ pub struct Selector {
 }
 
 impl Selector {
-    pub fn new(key: String, value :String) -> Self {
-        Selector { key, value: vec![value].into_iter().collect() }
+    pub fn new(key: String, value: Vec<String>) -> Self {
+        Selector {
+            key,
+            value: value.into_iter().collect(),
+        }
     }
 
     pub fn is_missing_value(&self) -> bool {
         self.value.len() == 0
     }
 
-    pub fn get_key(&self)->String {
+    pub fn get_key(&self) -> String {
         self.key.clone()
     }
 
@@ -62,7 +68,7 @@ impl Selector {
         self.value.insert(value);
     }
 
-    pub fn merge(&self, other :&Selector)-> Selector {
+    pub fn merge(&self, other: &Selector) -> Selector {
         let mut value = self.value.clone();
         for v in &other.value {
             if !value.contains(v) {

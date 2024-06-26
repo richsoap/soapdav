@@ -42,6 +42,11 @@ impl SelectorSetStorage for MemSelectorSetStorage {
         &'a self,
         params: &ListSelectorSetParams,
     ) -> Result<ListSelectorSetResult, SelectorSetStorageError> {
+        if params.names.is_empty() {
+            return Ok(ListSelectorSetResult {
+                selector_set: self.selector_sets.read().values().cloned().collect(),
+            });
+        }
         let mut result = Vec::new();
         for k in &params.names {
             match self.selector_sets.read().get(k) {

@@ -43,7 +43,7 @@ pub struct SelectorSet {
     pub name: String,
     pub static_selectors: Selectors,
     pub dynamic_selectors: Selectors,
-    pub modified_time: std::time::SystemTime,
+    pub modified_time: Option<std::time::SystemTime>,
 }
 
 impl SelectorSet {
@@ -52,7 +52,7 @@ impl SelectorSet {
             name: name.to_string(),
             static_selectors: vec![],
             dynamic_selectors: vec![],
-            modified_time: time::SystemTime::now(),
+            modified_time: Some(time::SystemTime::now()),
         }
     }
 
@@ -78,7 +78,7 @@ impl SelectorSet {
 
     pub fn get_next_required_selector(&self) -> Option<&Selector> {
         match self.get_next_required_index() {
-            Some(v) => self.static_selectors.get(v),
+            Some(v) => self.dynamic_selectors.get(v),
             None => None,
         }
     }

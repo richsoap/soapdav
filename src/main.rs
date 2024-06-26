@@ -41,12 +41,14 @@ impl Server {
         req: hyper::Request<hyper::Body>,
     ) -> Result<hyper::Response<Body>, Infallible> {
         match (req.method(), req.uri().path()) {
-            (_, "/dav") => return Ok(self.dh.handle(req).await),
             (_, "/manage/add_file") => return self.add_file(req).await,
             (_, "/manage/define_collection") => return self.define_collection(req).await,
             (_, "/manage/remove_collection") => return self.remove_collection(req).await,
             (_, "/manage/define_selector") => return self.define_selector(req).await,
-            (_,_) => return Ok(Response::new(Body::from(String::from("what?"))))
+            (method, path) => {
+                log::info!("receive dav request, method={}, path={}", method, path);
+                return Ok(self.dh.handle(req).await);
+            },
         }
     }
 

@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use log::{info, debug};
+
 use crate::{adapter::storage::*, Shared};
 
 #[derive(Debug, Clone)]
@@ -68,6 +70,13 @@ impl FileItem {
             self.kvs.insert(k.clone(), v.clone());
         }
     }
+
+    fn get_label(&self, key: &String) -> Option<String> {
+        match self.kvs.get(key) {
+            Some(v) => Some(v.clone()),
+            None => None,
+        }
+    }
 }
 
 impl SelectorStorage for MemFileKVFileStorage {
@@ -94,21 +103,26 @@ impl SelectorStorage for MemFileKVFileStorage {
         &'a self,
         params: &'a ListSelectorParams,
     ) -> Result<ListSelectorResult, SelectorStorageError> {
-        let default_selectors = self.default_file.read().to_selectors(&params.key);
-        let mut selectors: HashMap<String, Selector> = default_selectors
-            .iter()
-            .map(|s| (s.key.clone(), s.clone()))
-            .collect();
-        for file in self.files.read().iter() {
-            for (k, v) in &file.1.kvs {
-                match selectors.get_mut(k) {
-                    Some(s) => s.add_value(v.clone()),
-                    None => {
-                        selectors.insert(k.clone(), Selector::new(k.clone(), v.clone()));
-                    }
-                };
+        let mut selectors:HashMap<String, Selector> = params.key.iter().map(|s| (s.clone(), Selector::new(s.clone(), vec![]))).collect();
+        {
+            let default_file = self.default_file.read();
+            for key in &params.key {
+                match default_file.get_label(key) {
+                    Some(v) => {selectors.get_mut(key).unwrap().add_value(v)},
+                    None => {},
+                }
             }
         }
+        let default_selectors = selectors.iter().map(|(k,v)| v.clone()).collect();
+        for file in self.files.read().iter() {
+            for key in &params.key {
+                match file.1.get_label(key) {
+                    Some(v) => {selectors.get_mut(key).unwrap().add_value(v);},
+                    _ => {},
+                }
+            }
+        }
+        debug!("default_selector: {:?} selectors: {:?}", default_selectors, selectors);
         Ok(ListSelectorResult {
             default_selector: default_selectors,
             selectors: selectors.iter().map(|(_k, v)| v.clone()).collect(),

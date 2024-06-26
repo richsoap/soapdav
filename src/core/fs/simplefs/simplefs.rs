@@ -74,8 +74,10 @@ impl SimpleFileSystem {
             Ok(v) => v,
             Err(_e) => return Err(FsError::NotFound),
         };
+        info!("get selector_set");
         // 将路径中的参数逐个填到selector中
         while !tokens.is_empty() && !selector_set.is_full() {
+            info!("fill selector_set params");
             let selector_value = tokens.pop_front().unwrap();
             // TODO: 带点的都是特殊说明文件，不是目录
             if selector_value.starts_with('.') {
@@ -86,10 +88,12 @@ impl SimpleFileSystem {
         }
         // 筛选器还没有满，找到下一个筛选项，并将可选结果以目录的形式返回
         if !selector_set.is_full() {
+            info!("return next filter");
             return self.read_selecting_dir_stream(selector_set, meta);
         }
         // 参数量刚好填满筛选器，说明需要返回文件列表
         if tokens.is_empty() {
+            info!("return file list");
             return self.read_matching_dir_stream(selector_set, meta);
         }
         // 进入到下一层，返回文件信息
@@ -122,15 +126,18 @@ impl SimpleFileSystem {
         selector_set: SelectorSet,
         meta: ReadDirMeta,
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
-        let next_selector = selector_set.get_next_required_selector().unwrap();
-        let next_selector = match self
-            .selector_storage
-            .get_selector_by_key(next_selector.get_key())
-        {
+        let next_selector = match selector_set.get_next_required_selector() {
+            Some(v) => v.clone(),
+            None => return Err(FsError::NotFound),
+        };
+        let next_selector_with_options = match self.kv_file.get_selector_by_key(next_selector.get_key()) {
             Ok(v) => v,
             Err(_) => return Err(FsError::NotFound),
         };
-        let mut dirs: Vec<Box<dyn DavDirEntry>> = next_selector
+        for value in &next_selector_with_options.value {
+            info!("value={}", value);
+        }
+        let mut dirs: Vec<Box<dyn DavDirEntry>> = next_selector_with_options
             .value
             .iter()
             .map(StaticDir::from)
@@ -171,7 +178,7 @@ impl SimpleFileSystem {
         let mut selectors = selector_set.static_selectors.clone();
         selectors.push(Selector::new(
             String::from(TITLE),
-            tokens.pop_front().unwrap(),
+            vec![tokens.pop_front().unwrap()],
         ));
         selectors.extend(selector_set.dynamic_selectors);
         let file = match self.kv_file.list_file(&ListFileParams {

@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use futures::FutureExt;
 use log::info;
 use simplefs::staticfile::StaticFile;
@@ -21,7 +23,11 @@ impl StaticDir {
 
 impl From<&SelectorSet> for StaticDir {
     fn from(value: &SelectorSet) -> Self {
-        return StaticDir { name: value.name.clone(), modified_time: value.modified_time }
+        let modified_time = match value.modified_time {
+            Some(t) => t,
+            None => SystemTime::now(),
+        };
+        return StaticDir { name: value.name.clone(), modified_time: modified_time }
     }
 }
 
