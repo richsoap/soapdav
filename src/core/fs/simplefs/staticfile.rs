@@ -1,34 +1,18 @@
 use std::cmp::{max, min};
 
 use bytes::Bytes;
+use derive_builder::Builder;
 use futures::FutureExt;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
 use crate::adapter::storage::KV;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Builder)]
 pub struct StaticFile {
     name: String,
     modified_time: std::time::SystemTime,
     body: Bytes,
     offset: usize,
-}
-
-impl StaticFile {
-    pub fn new(name: String, body: Option<Bytes>, modified_time: Option<std::time::SystemTime>) -> Self {
-        StaticFile {
-            name: name,
-            modified_time: match modified_time {
-                Some(v) => v,
-                None => std::time::SystemTime::now(),
-            },
-            body: match body {
-                Some(v) => v,
-                None => Bytes::new(),
-            },
-            offset: 0,
-        }
-    }
 }
 
 impl DavMetaData for StaticFile {
@@ -60,11 +44,12 @@ impl DavDirEntry for StaticFile {
 impl From<&KV> for StaticFile {
     fn from(kv: &KV) -> Self {
         let mut name = String::new();
-        name.push('.');
         name.push_str(&kv.key);
         name.push('=');
         name.push_str(&kv.value);
-        StaticFile::new(name, None,None)
+        let mut sb = StaticFileBuilder::create_empty();
+        sb.name(name);
+        return sb.build().unwrap();
     }
 }
 

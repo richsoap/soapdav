@@ -77,7 +77,6 @@ impl SimpleFileSystem {
         info!("get selector_set");
         // 将路径中的参数逐个填到selector中
         while !tokens.is_empty() && !selector_set.is_full() {
-            info!("fill selector_set params");
             let selector_value = tokens.pop_front().unwrap();
             // TODO: 带点的都是特殊说明文件，不是目录
             if selector_value.starts_with('.') {
@@ -97,7 +96,8 @@ impl SimpleFileSystem {
             return self.read_matching_dir_stream(selector_set, meta);
         }
         // 进入到下一层，返回文件信息
-        return self.read_file_meta_dir_stream(selector_set, &mut tokens, meta);
+        info!("return file meta");
+        return self.read_file_meta_stream(selector_set, &mut tokens, meta);
     }
 
     fn read_root_dir_stream<'a>(
@@ -130,10 +130,11 @@ impl SimpleFileSystem {
             Some(v) => v.clone(),
             None => return Err(FsError::NotFound),
         };
-        let next_selector_with_options = match self.kv_file.get_selector_by_key(next_selector.get_key()) {
-            Ok(v) => v,
-            Err(_) => return Err(FsError::NotFound),
-        };
+        let next_selector_with_options =
+            match self.kv_file.get_selector_by_key(next_selector.get_key()) {
+                Ok(v) => v,
+                Err(_) => return Err(FsError::NotFound),
+            };
         for value in &next_selector_with_options.value {
             info!("value={}", value);
         }
@@ -143,7 +144,8 @@ impl SimpleFileSystem {
             .map(StaticDir::from)
             .map(|x| Box::new(x) as Box<dyn DavDirEntry>)
             .collect();
-        dirs.push(Box::new(StaticFile::new(next_selector.key, None, None)) as Box<dyn DavDirEntry>);
+        // 不记得有什么用了，先注释掉通过编译
+        // dirs.push(Box::new(StaticFile::new(next_selector.key, None, None)) as Box<dyn DavDirEntry>);
         Ok(Box::pin(iter(dirs)))
     }
 
@@ -169,20 +171,18 @@ impl SimpleFileSystem {
         Ok(Box::pin(iter(dirs)))
     }
 
-    fn read_file_meta_dir_stream<'a>(
+    fn read_file_meta_stream<'a>(
         &'a self,
         selector_set: SelectorSet,
         tokens: &mut VecDeque<String>,
         meta: ReadDirMeta,
     ) -> FsResult<FsStream<Box<dyn DavDirEntry>>> {
-        let mut selectors = selector_set.static_selectors.clone();
-        selectors.push(Selector::new(
-            String::from(TITLE),
-            vec![tokens.pop_front().unwrap()],
-        ));
-        selectors.extend(selector_set.dynamic_selectors);
+        // 不允许重名，所以此处只用TITLE一个做筛选即可
         let file = match self.kv_file.list_file(&ListFileParams {
-            selectors: selectors,
+            selectors: vec![Selector::new(
+                String::from(TITLE),
+                vec![tokens.pop_front().unwrap()],
+            )],
             ids: vec![],
         }) {
             Ok(r) => match r.files.get(0) {
@@ -191,12 +191,16 @@ impl SimpleFileSystem {
             },
             Err(_) => return Err(FsError::NotFound),
         };
-        let dirs: Vec<Box<dyn DavDirEntry>> = file
+        info!("result file: {:?}", file);
+        let mut dirs: Vec<Box<dyn DavDirEntry>> = file
             .label
             .iter()
+            .filter(|kv| !BASIC_META_KEYS.contains(&kv.key.as_str()))
             .map(StaticFile::from)
             .map(|x| Box::new(x) as Box<dyn DavDirEntry>)
             .collect();
+        // 不记得有什么用了，先注释掉通过编译
+        // StaticFile::new(name, body, modified_time);
         Ok(Box::pin(iter(dirs)))
     }
 }
@@ -207,6 +211,8 @@ impl DavFileSystem for SimpleFileSystem {
         path: &'a webdav_handler::davpath::DavPath,
         options: webdav_handler::fs::OpenOptions,
     ) -> webdav_handler::fs::FsFuture<Box<dyn DavFile>> {
+        // 1. 打开KV对
+        // 2. 打开文件本体
         todo!()
     }
 
