@@ -67,3 +67,24 @@ impl TaskManager for MemoryTaskManager {
         Ok(updated)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::test;
+    use serde_json::json;
+
+    #[test]
+    async fn test_mem_task_manager() {
+        let manager = MemoryTaskManager::new();
+        {
+            let result = manager.create_task(TaskType::Scraper, json!(true)).await;
+            assert!(result.is_ok());
+        }
+        {
+            let result = manager.query_tasks(Some(TaskType::Scraper), Some(TaskStatus::Pending)).await;
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().len(), 1)
+        }
+    }
+}
