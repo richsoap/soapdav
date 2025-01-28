@@ -5,7 +5,8 @@ use webdav_handler::fs::DavFileSystem;
 use serde::{Deserialize, Serialize};
 
 
-use crate::adapter::storage::{self, KVFileStorageError, SelectorSet, SelectorSetStorageError, SelectorStorageError, KV};
+use crate::adapter::storage::selector::{self, KVFileStorageError, SelectorSet, SelectorSetStorageError, SelectorStorageError, KV};
+use crate::adapter::storage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineCollectionParams {
@@ -34,7 +35,7 @@ pub struct AddFileResult {
 
 }
 
-pub type DefineSelectorParams = storage::DefineSelectorParams;
+pub type DefineSelectorParams = storage::selector::DefineSelectorParams;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefineSelectorResult {}

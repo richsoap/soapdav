@@ -11,7 +11,7 @@ use webdav_handler::fs::{
     DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsResult, FsStream, ReadDirMeta,
 };
 
-use crate::adapter::storage::{
+use crate::adapter::storage::selector::{
     AddFileParams, DefineSelectorSetParams, KVFileStorage, ListFileParams, ListSelectorSetParams,
     RemoveSelectorSetParams, Selector, SelectorSet, SelectorSetStorage, SelectorStorage, KV,
 };

@@ -7,7 +7,7 @@ use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 use xml::name;
 use crate::core::fs::*;
 
-use crate::adapter::storage::{KVFile, SelectorSet, KV};
+use crate::adapter::storage::selector::{KVFile, SelectorSet, KV};
 
 #[derive(Debug, Clone)]
 pub struct StaticDir {

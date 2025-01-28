@@ -5,7 +5,7 @@ use derive_builder::Builder;
 use futures::FutureExt;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 
-use crate::adapter::storage::KV;
+use crate::adapter::storage::selector::KV;
 
 #[derive(Debug, Clone, Builder)]
 pub struct StaticFile {
