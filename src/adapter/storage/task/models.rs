@@ -4,11 +4,17 @@ use chrono::{DateTime, Local};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Task {
     pub id: i64,
-    pub task_type: String,
+    pub task_type: TaskType,
     pub task_status: TaskStatus,
     pub task_params: serde_json::Value,
     pub created_at: DateTime<Local>,
     pub updated_at: DateTime<Local>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskType {
+    Spider,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

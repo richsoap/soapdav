@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use http::Response;
 use hyper::{self, body};
-use soapdav::adapter::storage::mem::MemSelectorSetStorage;
-use soapdav::adapter::storage::MemFileKVFileStorage;
+use soapdav::adapter::storage::selector::mem::MemSelectorSetStorage;
+use soapdav::adapter::storage::selector::MemFileKVFileStorage;
 use soapdav::{AddFileParams, CollectionFS, DefineCollectionParams, DefineSelectorParams, RemoveCollectionParams, SimpleFileSystem};
 
 use log::info;

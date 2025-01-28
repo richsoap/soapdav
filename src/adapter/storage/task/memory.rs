@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use serde_json::Value as JsonValue;
-use super::{TaskError, Task, TaskStatus, TaskManager};
-use chrono::{DateTime, Local};
+use super::{models::TaskType, Task, TaskError, TaskManager, TaskStatus};
+use chrono::Local;
 
 // 示例实现：内存后端（用于测试）
 pub struct MemoryTaskManager {
@@ -22,7 +22,7 @@ impl MemoryTaskManager {
 impl TaskManager for MemoryTaskManager {
     async fn create_task(
         &self,
-        task_type: String,
+        task_type: TaskType,
         task_params: JsonValue,
     ) -> Result<Task, TaskError> {
         let mut storage = self.storage.write().await;
@@ -40,7 +40,7 @@ impl TaskManager for MemoryTaskManager {
 
     async fn query_tasks(
         &self,
-        task_type: Option<String>,
+        task_type: Option<TaskType>,
         task_status: Option<TaskStatus>,
     ) -> Result<Vec<Task>,TaskError> {
         let storage = self.storage.read().await;
