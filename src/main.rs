@@ -4,45 +4,35 @@ use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::SystemTime;
 
-use hyper;
-use soapdav::adapter::storage::{
-    ListSelectorSetResult, MockSelectorSetStorage, SelectorSet, SelectorSetStorage,
-};
-use soapdav::SimpleFileSystem;
+use http::Response;
+use hyper::{self, body};
+use soapdav::adapter::storage::mem::MemSelectorSetStorage;
+use soapdav::adapter::storage::MemFileKVFileStorage;
+use soapdav::{AddFileParams, CollectionFS, DefineCollectionParams, DefineSelectorParams, RemoveCollectionParams, SimpleFileSystem};
 
-use log::{info, warn};
+use log::info;
 use webdav_handler::body::Body;
 use webdav_handler::{fakels, DavHandler};
 
 #[derive(Clone)]
 struct Server {
     dh: DavHandler,
+    fs: SimpleFileSystem,
 }
 
 impl Server {
     pub fn new() -> Self {
-        let mut selector_set_storage = MockSelectorSetStorage::new();
-        {
-            selector_set_storage
-                .expect_list_selector_set()
-                .returning(|_| {
-                    Ok(ListSelectorSetResult {
-                        selector_set: vec![SelectorSet::new(&String::from("a"))],
-                    })
-                });
-        }
-        let simplefs = SimpleFileSystem {
-            selector_set_storage: (Arc::new(selector_set_storage) as Arc<dyn SelectorSetStorage>) ,
-            selector_storage: todo!(),
-        };
+        let selector_set_storage = Arc::new(MemSelectorSetStorage::new());
+        let new_kv = Arc::new(MemFileKVFileStorage::new());
+        let simplefs = SimpleFileSystem::new(selector_set_storage, new_kv.clone(), new_kv);
         let config = DavHandler::builder()
-            .filesystem(Box::new(simplefs))
+            .filesystem(Box::new(simplefs.clone()))
             .locksystem(fakels::FakeLs::new())
             .autoindex(true, None);
         Server {
             dh: config.build_handler(),
+            fs: simplefs,
         }
     }
 
@@ -50,7 +40,76 @@ impl Server {
         &self,
         req: hyper::Request<hyper::Body>,
     ) -> Result<hyper::Response<Body>, Infallible> {
-        Ok(self.dh.handle(req).await)
+        match (req.method(), req.uri().path()) {
+            (_, "/manage/add_file") => return self.add_file(req).await,
+            (_, "/manage/define_collection") => return self.define_collection(req).await,
+            (_, "/manage/remove_collection") => return self.remove_collection(req).await,
+            (_, "/manage/define_selector") => return self.define_selector(req).await,
+            (method, path) => {
+                log::info!("receive dav request, method={}, path={}", method, path);
+                return Ok(self.dh.handle(req).await);
+            },
+        }
+    }
+
+    async fn add_file(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<Body>, Infallible> {
+        let whole_body = body::to_bytes(req.into_body()).await.unwrap();
+        let str_body = std::str::from_utf8(&whole_body).unwrap();
+        let params: AddFileParams = serde_json::from_str(str_body).unwrap();
+        match self.fs.add_file(&params) {
+            Ok(r) => Ok(Response::new(Body::from(
+                serde_json::to_string(&r).unwrap(),
+            ))),
+            Err(_) => Ok(Response::new(Body::from(String::from("NotOk")))),
+        }
+    }
+
+    async fn define_collection(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<Body>, Infallible> {
+        let whole_body = body::to_bytes(req.into_body()).await.unwrap();
+        let str_body = std::str::from_utf8(&whole_body).unwrap();
+        let params: DefineCollectionParams = serde_json::from_str(str_body).unwrap();
+        match self.fs.define_collection(&params) {
+            Ok(r) => Ok(Response::new(Body::from(
+                serde_json::to_string(&r).unwrap(),
+            ))),
+            Err(_) => Ok(Response::new(Body::from(String::from("NotOk")))),
+        }
+    }
+
+    async fn remove_collection(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<Body>, Infallible> {
+        let whole_body = body::to_bytes(req.into_body()).await.unwrap();
+        let str_body = std::str::from_utf8(&whole_body).unwrap();
+        let params: RemoveCollectionParams = serde_json::from_str(str_body).unwrap();
+        match self.fs.remove_collection(&params) {
+            Ok(r) => Ok(Response::new(Body::from(
+                serde_json::to_string(&r).unwrap(),
+            ))),
+            Err(_) => Ok(Response::new(Body::from(String::from("NotOk")))),
+        }
+    }
+
+    async fn define_selector(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<Body>, Infallible> {
+        let whole_body = body::to_bytes(req.into_body()).await.unwrap();
+        let str_body = std::str::from_utf8(&whole_body).unwrap();
+        let params: DefineSelectorParams = serde_json::from_str(str_body).unwrap();
+        match self.fs.define_selector(&params) {
+            Ok(r) => Ok(Response::new(Body::from(
+                serde_json::to_string(&r).unwrap(),
+            ))),
+            Err(_) => Ok(Response::new(Body::from(String::from("NotOk")))),
+        }
     }
 }
 

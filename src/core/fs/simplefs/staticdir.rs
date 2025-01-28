@@ -1,9 +1,13 @@
+use std::time::SystemTime;
+
 use futures::FutureExt;
 use log::info;
+use simplefs::staticfile::StaticFile;
 use webdav_handler::fs::{DavDirEntry, DavFile, DavMetaData};
 use xml::name;
+use crate::core::fs::*;
 
-use crate::adapter::storage::SelectorSet;
+use crate::adapter::storage::{KVFile, SelectorSet, KV};
 
 #[derive(Debug, Clone)]
 pub struct StaticDir {
@@ -19,13 +23,27 @@ impl StaticDir {
 
 impl From<&SelectorSet> for StaticDir {
     fn from(value: &SelectorSet) -> Self {
-        return StaticDir { name: value.name.clone(), modified_time: value.modified_time }
+        let modified_time = match value.modified_time {
+            Some(t) => t,
+            None => SystemTime::now(),
+        };
+        return StaticDir { name: value.name.clone(), modified_time: modified_time }
     }
 }
 
 impl From<&String> for StaticDir {
     fn from(name: &String) -> Self {
         return StaticDir { name: name.clone(), modified_time: std::time::SystemTime::now() }
+    }
+}
+
+impl From<&KVFile> for StaticDir {
+    fn from(value: &KVFile) -> Self {
+        return StaticDir { 
+            name: KV::find_value_default(&value.label, &String::from(TITLE), String::from("untitiled")), 
+            // TODO: 使用真时间
+            modified_time: std::time::SystemTime::now(),
+        }
     }
 }
 

@@ -1,28 +1,43 @@
+use super::{SelectorStorage, Selectors};
 use std::collections::HashMap;
-use super::Selectors;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // 定义 KVFileStorage 错误, 用于处理可能出现的错误情况
 #[derive(Error, Debug)]
 pub enum KVFileStorageError {
+    #[error("NotFound")]
+    NotFound,
 }
 
 // KVFileStorage trait
-pub trait KVFileStorage {
-    fn list_file(&self, params: ListFileParams) -> Result<ListFileResult, KVFileStorageError>;
+pub trait KVFileStorage: SelectorStorage {
+    fn list_file<'a>(
+        &'a self,
+        params: &'a ListFileParams,
+    ) -> Result<ListFileResult, KVFileStorageError>;
 
-    fn add_file(&self, params: AddFileParams) -> Result<AddFileResult, KVFileStorageError>;
+    fn add_file<'a>(
+        &'a self,
+        params: &'a AddFileParams,
+    ) -> Result<AddFileResult, KVFileStorageError>;
 
-    fn remove_file (&self, params: RemoveFileParams) -> Result<RemoveFileResult, KVFileStorageError>;
+    fn remove_file<'a>(
+        &'a self,
+        params: &'a RemoveFileParams,
+    ) -> Result<RemoveFileResult, KVFileStorageError>;
 
-    fn set_label(&self, params: SetLabelParams) -> Result<SetLabelResult, KVFileStorageError>;
+    fn set_label<'a>(
+        &'a self,
+        params: &'a SetLabelParams,
+    ) -> Result<SetLabelResult, KVFileStorageError>;
 }
 
 // KV 定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KV {
-    key: String,
-    value: String,
+    pub key: String,
+    pub value: String,
 }
 
 pub type KVs = Vec<KV>;
@@ -36,55 +51,85 @@ impl KV {
         }
         None
     }
+
+    pub fn find_value_default(kvs: &KVs, key: &String, default_value: String) -> String {
+        match KV::find_value(kvs, key) {
+            Some(v) => v,
+            None => default_value,
+        }
+    }
+
+    pub fn new(key: String, value: String) -> KV {
+        KV {
+            key: key,
+            value: value,
+        }
+    }
+
+    pub fn from_pair((k, v): (&String, &String)) -> KV {
+        KV::new(k.clone(), v.clone())
+    }
+
+    pub fn to_pair(&self) -> (String, String) {
+        (self.key.clone(), self.value.clone())
+    }
+
+    pub fn to_hash_map(kvs: &KVs) -> HashMap<String, String> {
+        kvs.iter().map(KV::to_pair).collect()
+    }
+
+    pub fn from_hash_map(kvs: HashMap<String, String>) -> KVs {
+        kvs.iter().map(KV::from_pair).collect()
+    }
 }
 
 // KVFile 的定义
 #[derive(Debug, Clone)]
 pub struct KVFile {
-    id: u64,
-    label: KVs,
+    pub id: u64,
+    pub label: KVs,
 }
 
 // 请求的参数与结果定义
 #[derive(Debug, Clone)]
 pub struct ListFileParams {
-    ids: Vec<u64>,
-    selector: Selectors,
+    pub ids: Vec<u64>,
+    pub selectors: Selectors,
 }
 
 #[derive(Debug, Clone)]
 pub struct ListFileResult {
-    files: Vec<KVFile>,
+    pub files: Vec<KVFile>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SetLabelParams {
-    id: u64,
-    label: HashMap<String, String>,
+    pub id: u64,
+    pub label: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SetLabelResult {
-
+    pub kvs: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RemoveFileParams {
-    id: Vec<u64>,
+    pub ids: Vec<u64>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RemoveFileResult {
-
+    pub amount: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct AddFileParams {
-    label: HashMap<String, String>,
+    pub label: Vec<KV>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AddFileResult {
-    id: u64,
-    label: HashMap<String, String>,
+    pub id: u64,
+    pub label: HashMap<String, String>,
 }
