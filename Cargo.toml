@@ -45,8 +45,9 @@ async-trait = "0.1.85"
 reqwest = "0.12.12"
 scraper = {version = "0.22.0"}
 getset = "0.1.4"
-diesel = {version = "2.2.6", features = ["sqlite", "chrono"]}
+diesel = {version = "2.2.6", features = ["sqlite", "chrono", "r2d2"]}
 serde_yaml = "0.9.34+deprecated"
+r2d2 = "0.8.10"
 
 [dev-dependencies]
 clap = { version = "4.4.8", features = ["derive"] }

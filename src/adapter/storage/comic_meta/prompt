@@ -1,0 +1,5 @@
+let os = order.unwrap_or_default();
+count_query = Self::apply_orders(&os, count_query);
+
+`os` does not live long enough
+values in a scope are dropped in the opposite order they are defined

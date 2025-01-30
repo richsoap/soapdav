@@ -1,4 +1,4 @@
-use serde_json::Value as JsonValue;
+use r2d2::ManageConnection;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -8,34 +8,24 @@ pub enum StorageError {
         task_id: i64,
     },
 
-    #[error("Invalid task status transition: {from} -> {to}")]
+    #[error("Invalid status transition: {from} -> {to}")]
     InvalidStatusTransition {
         from: String,
         to: String,
     },
 
-    #[error("Invalid task parameters: {message}")]
+    #[error("Invalid parameters {params}: {message}")]
     InvalidParams {
         message: String,
-        params: JsonValue,
+        params: String,
     },
 
     #[error("Concurrent modification detected")]
     ConcurrentUpdate,
 
-    #[error("network error: {message}")]
-    NetWorkError {
-        message: String,
-    },
+    #[error("network error: {0}")]
+    NetWorkError(String),
 
-}
-
-// 可选：自定义错误转换
-impl From<serde_json::Error> for StorageError {
-    fn from(err: serde_json::Error) -> Self {
-        StorageError::InvalidParams {
-            message: format!("JSON parse error: {}", err),
-            params: JsonValue::Null,
-        }
-    }
+    #[error("database error: {0}")]
+    DatabaseError(#[from] diesel::result::Error),
 }
