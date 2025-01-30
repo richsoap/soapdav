@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod base;
+pub mod model;
 mod core;
 
 pub use core::*;

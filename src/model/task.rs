@@ -6,7 +6,7 @@ pub struct Task {
     pub id: i64,
     pub task_type: TaskType,
     pub task_status: TaskStatus,
-    pub task_params: serde_json::Value,
+    pub task_params: String,
     pub created_at: DateTime<Local>,
     pub updated_at: DateTime<Local>,
 }

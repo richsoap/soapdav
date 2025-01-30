@@ -2,7 +2,7 @@ use serde_json::Value as JsonValue;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum TaskError {
+pub enum StorageError {
     #[error("Task not found: {task_id}")]
     NotFound {
         task_id: i64,
@@ -22,12 +22,18 @@ pub enum TaskError {
 
     #[error("Concurrent modification detected")]
     ConcurrentUpdate,
+
+    #[error("network error: {message}")]
+    NetWorkError {
+        message: String,
+    },
+
 }
 
 // 可选：自定义错误转换
-impl From<serde_json::Error> for TaskError {
+impl From<serde_json::Error> for StorageError {
     fn from(err: serde_json::Error) -> Self {
-        TaskError::InvalidParams {
+        StorageError::InvalidParams {
             message: format!("JSON parse error: {}", err),
             params: JsonValue::Null,
         }

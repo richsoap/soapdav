@@ -1,9 +1,9 @@
 
 
 use async_trait::async_trait;
-use serde_json::Value as JsonValue;
-use super::{models::TaskType, Task, TaskError, TaskManager, TaskStatus};
+use super::{StorageError, TaskManager};
 use chrono::Local;
+use crate::model::*;
 
 // 示例实现：内存后端（用于测试）
 pub struct MemoryTaskManager {
@@ -23,8 +23,8 @@ impl TaskManager for MemoryTaskManager {
     async fn create_task(
         &self,
         task_type: TaskType,
-        task_params: JsonValue,
-    ) -> Result<Task, TaskError> {
+        task_params: String,
+    ) -> Result<Task, StorageError> {
         let mut storage = self.storage.write().await;
         let new_task = Task {
             id: storage.len() as i64 + 1,
@@ -42,7 +42,7 @@ impl TaskManager for MemoryTaskManager {
         &self,
         task_type: Option<TaskType>,
         task_status: Option<TaskStatus>,
-    ) -> Result<Vec<Task>,TaskError> {
+    ) -> Result<Vec<Task>,StorageError> {
         let storage = self.storage.read().await;
         Ok(storage
             .iter()
@@ -55,11 +55,11 @@ impl TaskManager for MemoryTaskManager {
     async fn update_task(
         &self,
         task: Task,
-    ) -> Result<Task,TaskError> {
+    ) -> Result<Task,StorageError> {
         let mut storage = self.storage.write().await;
         let index = storage.iter()
             .position(|t| t.id == task.id)
-            .ok_or_else(|| TaskError::NotFound { task_id: task.id })?;
+            .ok_or_else(|| StorageError::NotFound { task_id: task.id })?;
         
         let mut updated = task.clone();
         updated.updated_at = Local::now();
@@ -72,13 +72,12 @@ impl TaskManager for MemoryTaskManager {
 mod tests {
     use super::*;
     use tokio::test;
-    use serde_json::json;
 
     #[test]
     async fn test_mem_task_manager() {
         let manager = MemoryTaskManager::new();
         {
-            let result = manager.create_task(TaskType::Scraper, json!(true)).await;
+            let result = manager.create_task(TaskType::Scraper,"true".into()).await;
             assert!(result.is_ok());
         }
         {
